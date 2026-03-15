@@ -560,7 +560,7 @@ FROM python:3.11-slim
 
 | Setting | Value | Rationale |
 |---------|-------|-----------|
-| Workers | 2 | Fits 512MB Cloud Run instance |
+| Workers | 2 | Fits 512MB container instances |
 | Threads | 2 | Handles concurrent requests per worker |
 | Timeout | 120s | Accommodates OpenAI response times |
 | Keep-alive | 5s | Connection reuse |
@@ -568,17 +568,21 @@ FROM python:3.11-slim
 | Max requests jitter | 100 | Stagger worker restarts |
 | Preload | Yes | Share CSV data across workers |
 
-### Google Cloud Run
+### Platform-Agnostic Deployment
+
+The Dockerfile and Gunicorn config are platform-agnostic. Deploy to any container hosting provider by setting these environment variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes (for AI) | OpenAI API key |
+| `DATABASE_URL` | Yes (prod) | PostgreSQL connection string |
+| `FLASK_SECRET_KEY` | Yes (prod) | Session signing key |
+| `PORT` | Depends on host | Port to bind (default: 8080) |
+
+For non-Docker deployments, run directly with Gunicorn:
 
 ```bash
-gcloud run deploy pdgm-lookup \
-  --image=REGISTRY/pdgm-lookup:TAG \
-  --region=us-central1 \
-  --memory=512Mi \
-  --cpu=1 \
-  --min-instances=0 \
-  --max-instances=10 \
-  --set-env-vars=OPENAI_API_KEY=...,DATABASE_URL=...,FLASK_SECRET_KEY=...
+gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
 ```
 
 ### Production Dependencies (15 packages)

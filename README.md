@@ -164,6 +164,8 @@ curl -X POST http://localhost:5000/api/lookup \
 
 ### Docker
 
+The included Dockerfile is platform-agnostic and works with any container hosting provider (Railway, Render, Fly.io, AWS ECS, Azure Container Apps, DigitalOcean App Platform, etc.).
+
 ```bash
 docker build -t pdgm-lookup .
 docker run -p 8080:8080 \
@@ -174,22 +176,18 @@ docker run -p 8080:8080 \
   pdgm-lookup
 ```
 
-### Google Cloud Run
+The image uses Python 3.11-slim with Gunicorn (2 workers, 2 threads, 120s timeout). Health check endpoint is `GET /healthz`.
+
+### Without Docker
+
+Any platform that supports Python WSGI apps can run this directly:
 
 ```bash
-# Build and push
-gcloud builds submit --tag us-central1-docker.pkg.dev/$PROJECT/pdgm-repo/pdgm-lookup:latest
-
-# Deploy
-gcloud run deploy pdgm-lookup \
-  --image=us-central1-docker.pkg.dev/$PROJECT/pdgm-repo/pdgm-lookup:latest \
-  --region=us-central1 \
-  --memory=512Mi \
-  --cpu=1 \
-  --set-env-vars=OPENAI_API_KEY=sk-...,FLASK_SECRET_KEY=...,DATABASE_URL=postgresql://...
+pip install -r requirements.txt
+gunicorn wsgi:app --bind 0.0.0.0:8080 --workers 2 --threads 2
 ```
 
-The Dockerfile uses Python 3.11-slim with Gunicorn (2 workers, 2 threads, 120s timeout).
+Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK_SECRET_KEY`) on your hosting platform.
 
 ---
 
