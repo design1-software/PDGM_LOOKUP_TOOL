@@ -1,0 +1,11 @@
+<div id="auth-modal" class="modal-overlay" onclick="hideAuthModal();">
+  <div class="modal-content" onclick="event.stopPropagation();">
+    <button class="modal-close" aria-label="Close" onclick="hideAuthModal();">&times;</button>
+    <h2>Authentication Required</h2>
+    <p class="modal-subtitle">Please log in or register to continue.</p>
+    <div class="modal-actions">
+      <a href="{{ url_for('auth.login') }}" class="btn-secondary">Login</a>
+      <a href="{{ url_for('auth.register') }}" class="btn-secondary">Register</a>
+    </div>
+  </div>
+</div>

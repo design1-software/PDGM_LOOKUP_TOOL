@@ -1,0 +1,137 @@
+/* Minimal Mobile Responsiveness Fix */
+
+/* Ensure proper viewport handling */
+@viewport {
+    width: device-width;
+    initial-scale: 1;
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+    /* Fix main container for mobile */
+    .container, .main-container {
+        padding: 1rem;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+    
+    /* Make form elements touch-friendly */
+    input[type="text"], 
+    input[type="search"], 
+    textarea {
+        min-height: 44px;
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+        border-radius: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Make buttons touch-friendly */
+    button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    
+    /* Fix navigation for mobile */
+    .nav-button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px;
+        margin: 2px;
+    }
+    
+    /* Improve text readability on mobile */
+    body {
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-text-size-adjust: 100%;
+    }
+    
+    /* Fix any overflow issues */
+    * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Improve form layout on mobile */
+    .form-container {
+        padding: 1rem;
+        margin: 0;
+    }
+    
+    /* Stack elements vertically on mobile */
+    .form-group {
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    /* Fix any fixed positioning issues */
+    .fixed-element {
+        position: relative;
+    }
+}
+
+/* Tablet responsive design */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        padding: 2rem;
+        max-width: 90%;
+    }
+    
+    input, button {
+        font-size: 16px;
+    }
+}
+
+/* Cross-browser mobile fixes */
+/* iOS Safari specific fixes */
+@supports (-webkit-appearance: none) {
+    input[type="text"], 
+    input[type="search"] {
+        -webkit-appearance: none;
+        border-radius: 8px;
+    }
+    
+    button {
+        -webkit-appearance: none;
+    }
+}
+
+/* Android browser fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    input[type="text"], 
+    input[type="search"] {
+        background-clip: padding-box;
+    }
+}
+
+/* Prevent horizontal scrolling */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Improve touch targets */
+a, button, input, select, textarea {
+    touch-action: manipulation;
+}
+
+/* Fix any layout issues with flexbox */
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .flex-container {
+        flex-direction: column;
+    }
+}
+

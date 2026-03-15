@@ -1,0 +1,59 @@
+/* Minimal Navigation Fix - Removes duplicate navigation elements */
+
+/* Hide the duplicate navigation elements that are causing layout issues */
+.nav-breadcrumb .nav-button,
+.breadcrumb-nav .nav-button,
+.page-navigation .nav-button {
+    display: none !important;
+}
+
+/* Ensure the main navigation bar remains visible and functional */
+.main-nav,
+.header-nav,
+.top-navigation {
+    display: flex !important;
+}
+
+/* Fix any layout issues caused by the duplicate elements */
+.breadcrumb-container {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* Ensure proper spacing after removing duplicate elements */
+.main-content {
+    margin-top: 1rem;
+}
+
+/* Mobile responsiveness for the fixed navigation */
+@media (max-width: 768px) {
+    .main-nav {
+        padding: 0.5rem 1rem;
+    }
+    
+    .nav-button {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Cross-browser compatibility fixes */
+.nav-button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Ensure buttons work properly in all browsers */
+.nav-button:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.nav-button:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+

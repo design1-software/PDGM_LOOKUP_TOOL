@@ -1,0 +1,76 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: pdgm-lookup-tool
+  SERVICE_NAME: pdgm-tool
+  REGION: us-central1
+  REPOSITORY: pdgm-tool
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}"
+          gcloud builds submit --tag "$IMAGE_URI" --timeout=20m --quiet
+
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}"
+          
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image="$IMAGE_URI" \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --timeout=300 \
+            --concurrency=100 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=production" \
+            --set-secrets="OPENAI_API_KEY=OPENAI_API_KEY:latest,SMTP_SERVER=SMTP_SERVER:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_USERNAME=SMTP_USERNAME:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,FROM_EMAIL=FROM_EMAIL:latest,SENTRY_DSN=SENTRY_DSN:latest,REDIS_HOST=REDIS_HOST:latest,REDIS_PORT=REDIS_PORT:latest,REDIS_PASSWORD=REDIS_PASSWORD:latest,FLASK_SECRET_KEY=FLASK_SECRET_KEY:latest,REDIS_URL=REDIS_URL:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_KEY=SUPABASE_KEY:latest,DATABASE_URL=DATABASE_URL:latest,APP_VERSION=APP_VERSION:latest,CACHE_TYPE=CACHE_TYPE:latest,KB_IMAGES_BUCKET=KB_IMAGES_BUCKET:latest,GA_MEASUREMENT_ID=GA_MEASUREMENT_ID:latest" \
+            --quiet
+
+      - name: Verify deployment
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          
+          echo "Service deployed at: $SERVICE_URL"
+          sleep 30
+          
+          if curl -f "$SERVICE_URL/health" --max-time 30; then
+            echo "✓ Health check passed"
+          else
+            echo "✗ Health check failed - checking logs..."
+            gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${{ env.SERVICE_NAME }}" \
+              --limit=20 --format="table(timestamp,severity,textPayload)"
+            exit 1
+          fi

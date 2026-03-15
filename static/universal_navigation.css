@@ -1,0 +1,391 @@
+/* Universal Navigation Styles for PDGM Lookup Tool */
+
+.pdgm-universal-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.nav-left,
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    margin: 0 16px;
+}
+
+.nav-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.nav-button:hover {
+    background: #e2e8f0;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.nav-button:active {
+    background: #cbd5e1;
+}
+
+.nav-button svg {
+    flex-shrink: 0;
+}
+
+.back-button {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.back-button:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+.home-button {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.home-button:hover {
+    background: #059669;
+    border-color: #059669;
+    color: white;
+}
+
+.breadcrumb-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    color: #9ca3af;
+    font-weight: 300;
+}
+
+.current-page {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.menu-button {
+    background: #6b7280;
+    color: white;
+    border-color: #6b7280;
+}
+
+.menu-button:hover {
+    background: #4b5563;
+    border-color: #4b5563;
+    color: white;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    position: absolute;
+    top: 100%;
+    right: 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    min-width: 280px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1001;
+}
+
+.menu-section {
+    padding: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.menu-section:last-child {
+    border-bottom: none;
+}
+
+.menu-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.05em;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: background-color 0.2s ease;
+    margin-bottom: 4px;
+}
+
+.menu-item:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.menu-item:last-child {
+    margin-bottom: 0;
+}
+
+.menu-item.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.menu-item.disabled:hover {
+    background: transparent;
+}
+
+.menu-icon {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.recent-page {
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.recent-page:hover {
+    color: #374151;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .nav-container {
+        height: 70px;
+        padding: 0 12px;
+    }
+    
+    .nav-center {
+        margin: 0 8px;
+    }
+    
+    .nav-button {
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+    
+    .nav-button span {
+        display: none;
+    }
+    
+    .breadcrumb-container {
+        font-size: 0.8125rem;
+    }
+    
+    .breadcrumb-item {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .nav-menu {
+        right: 12px;
+        left: 12px;
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-left,
+    .nav-right {
+        gap: 4px;
+    }
+    
+    .nav-button {
+        padding: 6px;
+        min-width: 36px;
+        justify-content: center;
+    }
+    
+    .breadcrumb-container {
+        font-size: 0.75rem;
+    }
+    
+    .breadcrumb-item {
+        max-width: 80px;
+    }
+    
+    .breadcrumb-separator {
+        display: none;
+    }
+    
+    .current-page::before {
+        content: '• ';
+        color: #9ca3af;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .pdgm-universal-nav {
+        border-bottom-width: 2px;
+    }
+    
+    .nav-button {
+        border-width: 2px;
+    }
+    
+    .nav-menu {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .nav-button,
+    .menu-item {
+        transition: none;
+    }
+}
+
+/* Dark mode support (if implemented) */
+@media (prefers-color-scheme: dark) {
+    .pdgm-universal-nav {
+        background: #1f2937;
+        border-bottom-color: #374151;
+    }
+    
+    .nav-button {
+        background: #374151;
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+    
+    .nav-button:hover {
+        background: #4b5563;
+        border-color: #6b7280;
+        color: #f9fafb;
+    }
+    
+    .breadcrumb-container {
+        color: #9ca3af;
+    }
+    
+    .breadcrumb-link {
+        color: #60a5fa;
+    }
+    
+    .breadcrumb-link:hover {
+        color: #93c5fd;
+    }
+    
+    .current-page {
+        color: #f3f4f6;
+    }
+    
+    .nav-menu {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    
+    .menu-section {
+        border-bottom-color: #374151;
+    }
+    
+    .menu-section h4 {
+        color: #9ca3af;
+    }
+    
+    .menu-item {
+        color: #d1d5db;
+    }
+    
+    .menu-item:hover {
+        background: #374151;
+        color: #f3f4f6;
+    }
+    
+    .menu-item.disabled {
+        color: #6b7280;
+    }
+    
+    .recent-page {
+        color: #9ca3af;
+    }
+    
+    .recent-page:hover {
+        color: #d1d5db;
+    }
+}
+
+/* Print styles */
+@media print {
+    .pdgm-universal-nav {
+        display: none;
+    }
+    
+    body {
+        padding-top: 0 !important;
+    }
+}
+

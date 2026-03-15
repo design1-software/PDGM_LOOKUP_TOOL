@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recert Risk Calculator - PDGM Lookup Tool</title>
+    <meta name="description" content="Estimate recertification risk with our PDGM Lookup Tool calculator.">
+    <link rel="canonical" href="{{ url_for('recert.recert', _external=True) }}">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Recert Risk Calculator",
+        "url": "{{ url_for('recert.recert', _external=True) }}"
+    }
+    </script>
+    
+    <!-- Import Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='error_handling_styles.css') }}">
+    
+    <!-- Enhanced Recert Styles -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-logo {
+            height: 40px;
+            width: auto;
+        }
+        
+        .btn-demo {
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-demo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .main-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .page-subtitle {
+            font-size: 1.125rem;
+            color: #64748b;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .calculator-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .calculator-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.5rem;
+            color: #2563eb;
+            display: block;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            position: relative;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .calculate-button {
+            width: 100%;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .calculate-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.3);
+        }
+        
+        .results-section {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 2px solid #fca5a5;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            display: none;
+        }
+        
+        .results-section.show {
+            display: block;
+        }
+        
+        .results-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            color: #dc2626;
+        }
+        
+        .results-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .results-date {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #dc2626;
+            margin-bottom: 1rem;
+        }
+        
+        .results-warning {
+            color: #dc2626;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .action-button {
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .action-button.secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .action-button.secondary:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .email-form {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .email-input {
+            padding: 0.5rem 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            transition: all 0.2s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-card-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            color: #2563eb;
+        }
+        
+        .info-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-card-description {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            border: 1px solid #93c5fd;
+        }
+        
+        .cta-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .cta-description {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-button {
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #fecaca;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 640px) {
+            .main-content {
+                padding: 2rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .calculator-section {
+                padding: 1.5rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <img src="{{ url_for('static', filename='fixed_logo_40h.svg') }}" alt="ReferralMate & ClearChoiceFTF Logo" class="header-logo">
+            <a href="{{ url_for('main.index') }}?_cb={{ version }}" class="btn-demo">PDGM Tool</a>
+        </header>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Recert Risk Calculator</h1>
+                <p class="page-subtitle">
+                    Calculate critical recertification deadlines to avoid patient discharge and billing resets. 
+                    Stay compliant with Medicare requirements and protect your revenue cycle.
+                </p>
+            </div>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="error-message">
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Calculator Section -->
+            <div class="calculator-section">
+                <svg class="calculator-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                
+                <form method="POST" id="recertForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="soc_date" class="form-label">Start of Care (SOC) Date</label>
+                            <input type="date" id="soc_date" name="soc_date" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="episode_length" class="form-label">Episode Length (Days)</label>
+                            <input type="number" id="episode_length" name="episode_length" class="form-input" min="1" value="60" placeholder="60">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="calculate-button">
+                        Calculate Recert Date
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Results Section -->
+            {% if due %}
+            <div class="results-section show">
+                <svg class="results-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <h3 class="results-title">Recert Due</h3>
+                <div class="results-date">{{ due }}</div>
+                <p class="results-warning">
+                    ⛔ If missed: patient must be discharged and re-admitted — triggering billing reset.
+                </p>
+                
+                <div class="action-buttons">
+                    <a href="{{ url_for('recert.recert_ics') }}?soc={{ soc }}&length={{ length }}" class="action-button">Add to Calendar</a>
+                    <form method="POST" action="{{ url_for('recert.recert_email') }}" class="email-form">
+                        <input type="hidden" name="soc_date" value="{{ soc }}">
+                        <input type="hidden" name="episode_length" value="{{ length }}">
+                        <input type="email" name="email" placeholder="Email Address" class="email-input" required>
+                        <button type="submit" class="action-button secondary">Email Reminder</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Info Cards -->
+            <div class="info-cards">
+                <div class="info-card">
+                    <svg class="info-card-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                    </svg>
+                    <h3 class="info-card-title">Critical Timing</h3>
+                    <p class="info-card-description">
+                        Recertification must occur before the end of each 60-day episode to maintain continuous care.
+                    </p>
+                </div>
+                
+                <div class="info-card">
+                    <svg class="info-card-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <h3 class="info-card-title">Compliance Risk</h3>
+                    <p class="info-card-description">
+                        Missing recertification deadlines can result in claim denials and revenue loss.
+                    </p>
+                </div>
+                
+                <div class="info-card">
+                    <svg class="info-card-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <h3 class="info-card-title">Documentation</h3>
+                    <p class="info-card-description">
+                        Proper documentation and physician orders are required for successful recertification.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- CTA Section -->
+            <div class="cta-section">
+                <h3 class="cta-title">Automate Your Recert Tracking</h3>
+                <p class="cta-description">
+                    Track all your patients' recert windows automatically with ReferralMate's Recert Dashboard.
+                </p>
+                <a href="#" class="cta-button">Learn More</a>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="footer">
+                <p><strong>Powered by ReferralMate | ClearChoiceFTF</strong></p>
+                <p>All outputs are sourced directly from official ICD-10/PDGM data.</p>
+                <p><strong>No clinical or billing advice is generated.</strong></p>
+            </footer>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='navigation_enhancements.js') }}"></script>
+</body>
+</html>
+

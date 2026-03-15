@@ -1,0 +1,21 @@
+/* Professional error message styling */
+.error-box {
+    background-color: #fef2f2;
+    border: 1px solid #fca5a5;
+    padding: 1rem;
+    border-radius: 6px;
+    color: #991b1b;
+    margin: 1rem 0;
+}
+
+.error-box h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #b91c1c;
+}
+
+.error-box p {
+    margin: 0;
+    line-height: 1.5;
+}

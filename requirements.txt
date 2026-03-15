@@ -1,0 +1,15 @@
+flask
+flask-sqlalchemy
+flask-migrate
+flask-login==0.6.3
+flask-mail==0.9.1
+flask-caching
+gunicorn
+openai
+openpyxl
+marshmallow==3.20.1
+werkzeug
+psycopg2-binary
+python-dotenv
+sentry-sdk[flask]==1.40.0
+email-validator==2.0.0

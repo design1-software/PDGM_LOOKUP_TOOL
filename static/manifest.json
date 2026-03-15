@@ -1,0 +1,15 @@
+{
+    "name": "PDGM Lookup Tool",
+    "short_name": "PDGM",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FF3B30",
+    "icons": [
+        {
+            "src": "/static/ReferralMate_CCFTF_combined.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
