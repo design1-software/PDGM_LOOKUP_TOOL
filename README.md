@@ -87,7 +87,7 @@ All 17 tests pass in ~1.5 seconds using in-memory SQLite and stubbed OpenAI.
 | `MAIL_USERNAME` | For email | - | SMTP username |
 | `MAIL_PASSWORD` | For email | - | SMTP password |
 | `PDGM_CSV_PATH` | No | `./CCFTF_pdgm_diagnosis_mapping.csv` | Path to PDGM mapping CSV |
-| `EXCLUDED_XLSX_PATH` | No | `./section111excludedicd10-jan2025_0.xlsx` | Section 111 exclusion list |
+| `EXCLUDED_XLSX_PATH` | No | `./section111_excluded_icd10_fy2026.xlsx` | Section 111 exclusion list |
 
 ---
 
@@ -194,17 +194,23 @@ Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK
 ## Data Sources
 
 ### PDGM Diagnosis Mapping CSV
-`CCFTF_pdgm_diagnosis_mapping.csv` — 74,261 rows with 7 columns:
+`CCFTF_pdgm_diagnosis_mapping.csv` — 74,719 rows built from the **CMS HH PDGM Grouper v07.1.26 (April 2026)** official `Diagnosis_Codes.txt` table. This is the latest available CMS data as of March 2026.
 
 | Column | Example | Description |
 |--------|---------|-------------|
 | `icd10_code` | `I10` | ICD-10 code (no dots) |
 | `description` | `Essential (primary) hypertension` | Clinical description |
-| `pdgm_clinical_group_code` | `H` | Single-letter group code (A-L) |
+| `pdgm_clinical_group_code` | `H` | Single-letter group code (A-L, or NA) |
 | `pdgm_clinical_group_name` | `MMTA_CARDIAC` | Full PDGM group name |
 | `PRIMARY_AWARDING_FLAG` | `0` | Can be primary diagnosis (0/1) |
 | `COMORBIDITY_GROUP` | `No_group` | Comorbidity classification |
 | `CODE_FIRST` | `0` | Must be sequenced first (0/1) |
+| `SUBCHAPTER` | `I10-I16` | ICD-10 subchapter range |
+| `MANIFESTATION_FLAG` | `0` | Manifestation code (0/1) |
+| `ECOI_FLAG` | `0` | External cause of injury (0/1) |
+| `UNACCEPTABLE_PDX` | `0` | Cannot be principal diagnosis (0/1) |
+| `UNSPECIFIED_PDX` | `0` | Unspecified — more specific code preferred (0/1) |
+| `PREDECESSOR_DX` | `` | Predecessor code (for split/replaced codes) |
 
 ### PDGM Clinical Groups
 
@@ -224,7 +230,14 @@ Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK
 | L | MMTA_RESP | 1.04 | Respiratory MMTA |
 
 ### Section 111 Exclusions
-`section111excludedicd10-jan2025_0.xlsx` — Codes excluded from primary diagnosis selection per CMS Section 111 reporting requirements.
+`section111_excluded_icd10_fy2026.xlsx` — FY2026 codes excluded from primary diagnosis selection per CMS Section 111 reporting requirements. Downloaded from [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists).
+
+### Keeping Data Current
+CMS updates PDGM groupings annually (October, with mid-year updates in January/April). To update:
+1. Download the latest HH PDGM Grouper from [CMS Grouper Software](https://www.cms.gov/medicare/payment/prospective-payment-systems/home-health/home-health-grouper-software)
+2. Extract `Diagnosis_Codes.txt` from the `tables/Versions/<latest>/RT/` folder inside the ZIP
+3. Rebuild the CSV (tab-delimited source → comma-delimited with group name mapping)
+4. Download the latest Section 111 exclusion list from [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists)
 
 ---
 

@@ -64,6 +64,10 @@ def index():
                 f"{format_pdgm_group(row.get('pdgm_clinical_group_name',''))}  "
                 f"ICD-10: {icd_code}"
             )
+            # Unacceptable/unspecified PDX flags from CMS
+            unacceptable_pdx = row.get('UNACCEPTABLE_PDX', '0') == '1'
+            unspecified_pdx = row.get('UNSPECIFIED_PDX', '0') == '1'
+
             lines = [
                 focus,
                 f"Description: {row.get('description','')}",
@@ -73,6 +77,10 @@ def index():
                 f"Code First: {row.get('CODE_FIRST','')}",
                 f"Billable: {'No (Section 111 Excluded)' if excluded else 'Yes'}",
             ]
+            if unacceptable_pdx:
+                lines.append("Unacceptable PDx: Yes - This code cannot be used as a principal diagnosis")
+            if unspecified_pdx:
+                lines.append("Unspecified PDx: Yes - A more specific code should be used when possible")
             text_result = "\n".join(lines)
             if zip_code or visit_count_input is not None:
                 service = ReimbursementService()

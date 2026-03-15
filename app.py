@@ -41,7 +41,7 @@ _root = Path(__file__).resolve().parent
 CSV_PATH = os.getenv("PDGM_CSV_PATH", str(_root / "CCFTF_pdgm_diagnosis_mapping.csv"))
 EXCLUDED_XLSX_PATH = os.getenv(
     "EXCLUDED_XLSX_PATH",
-    str(_root / "section111excludedicd10-jan2025_0.xlsx"),
+    str(_root / "section111_excluded_icd10_fy2026.xlsx"),
 )
 
 # ---------------------------------------------------------------------------
