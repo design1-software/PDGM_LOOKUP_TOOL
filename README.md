@@ -304,4 +304,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 
 ## License
 
-Proprietary - ClearChoiceFTF / ReferralMate
+MIT — see [LICENSE](LICENSE) for details.
