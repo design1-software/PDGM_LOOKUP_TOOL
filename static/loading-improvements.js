@@ -45,7 +45,7 @@ class DocumentationProgress {
             if (this.currentStep < this.steps.length - 1) {
                 // Complete current step
                 this.updateStep(this.currentStep, 'completed');
-                
+
                 // Move to next step
                 this.currentStep++;
                 this.updateStep(this.currentStep, 'active');
@@ -57,7 +57,7 @@ class DocumentationProgress {
         const stepElement = document.getElementById(`step-${this.steps[stepIndex].id}`);
         if (stepElement) {
             stepElement.className = `progress-step ${status}`;
-            
+
             if (status === 'completed') {
                 const icon = stepElement.querySelector('.progress-step-icon');
                 icon.innerHTML = '✓';
@@ -109,7 +109,7 @@ function setButtonLoading(buttonElement, isLoading) {
         buttonElement.classList.add('btn-loading');
         buttonElement.disabled = true;
         buttonElement.dataset.originalText = buttonElement.innerHTML;
-        
+
         // Add spinner to button text
         const spinner = '<span class="loading-spinner"></span>';
         buttonElement.innerHTML = spinner + buttonElement.textContent;
@@ -126,27 +126,27 @@ function setButtonLoading(buttonElement, isLoading) {
 async function showRoadmapEnhanced() {
     if (!currentResults) return;
 
-    const pdgmGroup = extractPdgmGroup(currentResults.response);
+    const pdgmGroup = currentResults.raw?.pdgm_clinical_group_name || currentResults.pdgm_group || '';
     const select = document.getElementById('discipline-select');
     const disciplines = Array.from(select.selectedOptions).map(o => o.value);
-    
+
     // Get button element
     const roadmapButton = event.target;
-    
+
     // Show modal immediately with loading state
     const modal = document.getElementById('roadmap-modal');
     modal.style.display = 'block';
-    
+
     // Start progress tracking
     const progress = new DocumentationProgress();
     progress.start('roadmap-body');
-    
+
     // Set button loading state
     setButtonLoading(roadmapButton, true);
-    
+
     try {
         const startTime = Date.now();
-        
+
         const resp = await fetch('/api/roadmap', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -156,16 +156,16 @@ async function showRoadmapEnhanced() {
                 disciplines: disciplines
             })
         });
-        
+
         const data = await resp.json();
-        
+
         // Ensure minimum loading time for better UX
         const minLoadTime = 2000;
         const elapsed = Date.now() - startTime;
         const remainingTime = Math.max(0, minLoadTime - elapsed);
-        
+
         setTimeout(() => {
-            if (data.success) {
+            if (data.roadmap) {
                 const content = `
                     <div class="success-message">Documentation roadmap generated successfully!</div>
                     <div class="roadmap-content">${data.roadmap}</div>
@@ -178,11 +178,11 @@ async function showRoadmapEnhanced() {
             } else {
                 progress.error('roadmap-body', data.error || 'Failed to generate roadmap. Please try again.');
             }
-            
+
             // Remove button loading state
             setButtonLoading(roadmapButton, false);
         }, remainingTime);
-        
+
     } catch (error) {
         console.error('Roadmap generation error:', error);
         progress.error('roadmap-body', 'Network error. Please check your connection and try again.');
@@ -194,27 +194,27 @@ async function showRoadmapEnhanced() {
 async function showAssessmentEnhanced() {
     if (!currentResults) return;
 
-    const pdgmGroup = extractPdgmGroup(currentResults.response);
+    const pdgmGroup = currentResults.raw?.pdgm_clinical_group_name || currentResults.pdgm_group || '';
     const select = document.getElementById('discipline-select');
     const disciplines = Array.from(select.selectedOptions).map(o => o.value);
-    
+
     // Get button element
     const assessmentButton = event.target;
-    
+
     // Show modal immediately with loading state
     const modal = document.getElementById('assessment-modal');
     modal.style.display = 'block';
-    
+
     // Start progress tracking
     const progress = new DocumentationProgress();
     progress.start('assessment-body');
-    
+
     // Set button loading state
     setButtonLoading(assessmentButton, true);
-    
+
     try {
         const startTime = Date.now();
-        
+
         const resp = await fetch('/api/assessment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -224,16 +224,16 @@ async function showAssessmentEnhanced() {
                 disciplines: disciplines
             })
         });
-        
+
         const data = await resp.json();
-        
+
         // Ensure minimum loading time for better UX
         const minLoadTime = 2000;
         const elapsed = Date.now() - startTime;
         const remainingTime = Math.max(0, minLoadTime - elapsed);
-        
+
         setTimeout(() => {
-            if (data.success) {
+            if (data.assessment) {
                 const content = `
                     <div class="success-message">Sample OASIS assessment generated successfully!</div>
                     <div class="roadmap-content">${data.assessment}</div>
@@ -246,11 +246,11 @@ async function showAssessmentEnhanced() {
             } else {
                 progress.error('assessment-body', data.error || 'Failed to generate assessment. Please try again.');
             }
-            
+
             // Remove button loading state
             setButtonLoading(assessmentButton, false);
         }, remainingTime);
-        
+
     } catch (error) {
         console.error('Assessment generation error:', error);
         progress.error('assessment-body', 'Network error. Please check your connection and try again.');
@@ -262,7 +262,7 @@ async function showAssessmentEnhanced() {
 function copyRoadmapEnhanced() {
     const content = document.querySelector('#roadmap-body .roadmap-content');
     const text = content ? content.innerText : document.getElementById('roadmap-body').innerText;
-    
+
     navigator.clipboard.writeText(text).then(() => {
         showToast('Roadmap copied to clipboard!', 'success');
     }).catch(() => {
@@ -273,7 +273,7 @@ function copyRoadmapEnhanced() {
 function copyAssessmentEnhanced() {
     const content = document.querySelector('#assessment-body .roadmap-content');
     const text = content ? content.innerText : document.getElementById('assessment-body').innerText;
-    
+
     navigator.clipboard.writeText(text).then(() => {
         showToast('Assessment copied to clipboard!', 'success');
     }).catch(() => {
@@ -288,7 +288,7 @@ function showToast(message, type = 'info') {
     if (existingToast) {
         existingToast.remove();
     }
-    
+
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -296,7 +296,7 @@ function showToast(message, type = 'info') {
         <span>${message}</span>
         <button onclick="this.parentElement.remove()" style="margin-left: 10px; background: none; border: none; color: inherit; cursor: pointer; font-size: 16px;">&times;</button>
     `;
-    
+
     // Add toast styles
     toast.style.cssText = `
         position: fixed;
@@ -311,7 +311,7 @@ function showToast(message, type = 'info') {
         max-width: 300px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
-    
+
     // Set background color based on type
     const colors = {
         success: '#059669',
@@ -320,10 +320,10 @@ function showToast(message, type = 'info') {
         warning: '#d97706'
     };
     toast.style.backgroundColor = colors[type] || colors.info;
-    
+
     // Add to page
     document.body.appendChild(toast);
-    
+
     // Auto remove after 3 seconds
     setTimeout(() => {
         if (toast.parentElement) {
@@ -348,13 +348,13 @@ toastStyles.textContent = `
 document.head.appendChild(toastStyles);
 
 // Initialize enhanced functions when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Replace original functions with enhanced versions
     window.showRoadmap = showRoadmapEnhanced;
     window.showAssessment = showAssessmentEnhanced;
     window.copyRoadmap = copyRoadmapEnhanced;
     window.copyAssessment = copyAssessmentEnhanced;
-    
+
     console.log('Enhanced loading indicators initialized');
 });
 

@@ -3,7 +3,7 @@
 import os
 from flask import Flask
 from models.user import db, User
-from .extensions import login_manager, mail, cache, migrate
+from .extensions import mail, cache, migrate
 from .config import DevelopmentConfig, ProductionConfig, TestingConfig
 from .errors import register_error_handlers
 
@@ -33,14 +33,8 @@ def create_app(config=None):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
     mail.init_app(app)
     cache.init_app(app)
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(User, int(user_id))
 
     # Create tables
     with app.app_context():

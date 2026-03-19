@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,24 +12,26 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='universal_navigation.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='cross_browser_compatibility.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='interactive_followup.css') }}">
- 
+
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/x-icon" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.ico') }}">
     <link rel="icon" type="image/x-icon" sizes="64x64" href="{{ url_for('static', filename='favicon-64x64.ico') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <meta name="theme-color" content="#2563eb">
-    
+
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Free PDGM lookup tool for home health agencies. Get instant ICD-10 to PDGM group mapping with AI-powered accuracy.">
+    <meta name="description"
+        content="Free PDGM lookup tool for home health agencies. Get instant ICD-10 to PDGM group mapping with AI-powered accuracy.">
     <meta name="keywords" content="PDGM, ICD-10, home health, Medicare, reimbursement, lookup tool">
     <link rel="canonical" href="{{ url_for('main.index', _external=True) }}">
-    
+
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="PDGM Lookup Tool - Free ICD-10 Mapping">
-    <meta property="og:description" content="Free PDGM lookup tool for home health agencies. Get instant ICD-10 to PDGM group mapping with AI-powered accuracy.">
+    <meta property="og:description"
+        content="Free PDGM lookup tool for home health agencies. Get instant ICD-10 to PDGM group mapping with AI-powered accuracy.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://pdgm.referralmate.org/">
-    
+
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
@@ -41,63 +44,111 @@
         "operatingSystem": "Web Browser"
     }
     </script>
-    <!-- Authentication state meta tags for JavaScript verification -->
-    {% if current_user.is_authenticated %}
-    <meta name="auth-state" content="authenticated">
-    <meta name="user-id" content="{{ current_user.id }}">
-    <meta name="user-name" content="{{ current_user.email }}">
-    {% else %}
-    <meta name="auth-state" content="anonymous">
-    {% endif %}
+    <meta name="tool-mode" content="free">
 </head>
+
 <body>
     <div class="container">
         {% with messages = get_flashed_messages() %}
-          {% if messages %}
-          <div class="flash-messages">
+        {% if messages %}
+        <div class="flash-messages">
             {% for msg in messages %}
-              <div class="flash-message">{{ msg }}</div>
+            <div class="flash-message">{{ msg }}</div>
             {% endfor %}
-          </div>
-          {% endif %}
+        </div>
+        {% endif %}
         {% endwith %}
-        
+
         <!-- Header with Authentication -->
         <header class="header">
             <div class="logo-section">
-                <img src="{{ url_for('static', filename='ReferralMate_CCFTF_combined.png') }}" alt="ReferralMate & ClearChoiceFTF Logo" class="header-logo">
+                <img src="{{ url_for('static', filename='ReferralMate_CCFTF_combined.png') }}"
+                    alt="ReferralMate & ClearChoiceFTF Logo" class="header-logo">
             </div>
-            
-            <!-- Authentication Section -->
-            <div class="auth-section">
-                {% if current_user.is_authenticated %}
-                    <div class="user-menu-enhanced">
-                        <span class="status-indicator"></span>
-                        <span class="user-name">{{ current_user.email }}</span>
-                        <a id="logout-link" href="{{ url_for('auth.logout') }}" class="btn-secondary">Logout</a>
-                    </div>
-                {% else %}
-                    <div class="auth-buttons">
-                        <a href="{{ url_for('auth.login') }}" class="btn-auth btn-login">Login</a>
-                        <a href="{{ url_for('auth.register') }}" class="btn-auth btn-register">Register</a>
-                    </div>
-                {% endif %}
 
-                <a href="https://calendly.com/clearchoiceftf/demo" class="btn-demo" target="_blank">Book Demo</a>
+            <!-- Lead Information Section -->
+            <div class="auth-section">
+                {% if lead_captured %}
+                <div class="user-menu-enhanced">
+                    <span class="status-indicator" style="background-color: #10b981;"></span>
+                    <span class="user-name">{{ lead_email }}</span>
+                </div>
+                {% endif %}
             </div>
         </header>
 
-        {% if current_user.is_authenticated %}
-        <div class="welcome-banner">
-            <span class="status-indicator"></span>
-            Welcome back!
+        {% if not lead_captured %}
+        <!-- Lead Capture Overlay -->
+        <div id="lead-capture-overlay"
+            style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; justify-content:center; align-items:center;">
+            <div
+                style="background:white; padding:2.5rem; border-radius:8px; max-width:400px; width:90%; text-align:center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <img src="{{ url_for('static', filename='ReferralMate_CCFTF_combined.png') }}" alt="Logo"
+                    style="max-width:200px; margin-bottom:1.5rem;">
+                <h2 style="color:#1e3a8a; margin-bottom:1rem; font-size:1.5rem;">Access the PDGM Lookup Tool</h2>
+                <p style="margin-bottom:2rem; color:#4b5563;">Please provide your name and email to unlock this free
+                    tool instantly.</p>
+                <form id="lead-capture-form" style="display:flex; flex-direction:column; gap:1rem;">
+                    <input type="text" id="lead-name" name="name" placeholder="Your Name" required
+                        style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:4px; font-size:1rem;">
+                    <input type="email" id="lead-email" name="email" placeholder="Your Email" required
+                        style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:4px; font-size:1rem;">
+                    <button type="submit" class="btn-submit"
+                        style="width:100%; padding:0.75rem; font-size:1rem; margin-top:0.5rem; background-color:#2563eb; color:white; border:none; border-radius:4px; cursor:pointer;">Unlock
+                        Tool</button>
+                </form>
+            </div>
         </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const leadForm = document.getElementById("lead-capture-form");
+                if (leadForm) {
+                    leadForm.addEventListener("submit", async function (e) {
+                        e.preventDefault();
+                        const submitBtn = leadForm.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.textContent = 'Unlocking...';
+
+                        const name = document.getElementById('lead-name').value;
+                        const email = document.getElementById('lead-email').value;
+
+                        try {
+                            const response = await fetch('/api/capture-lead', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: name, email: email })
+                            });
+
+                            const data = await response.json();
+                            if (data.success) {
+                                // Hide modal and dynamically show logged in state
+                                document.getElementById('lead-capture-overlay').style.display = 'none';
+
+                                const authSection = document.querySelector('.auth-section');
+                                if (authSection) {
+                                    authSection.innerHTML = `
+                                        <div class="user-menu-enhanced">
+                                            <span class="status-indicator" style="background-color: #10b981;"></span>
+                                            <span class="user-name">${email}</span>
+                                        </div>
+                                    `;
+                                }
+                            } else {
+                                alert(data.error || 'Failed to unlock tool. Please try again.');
+                                if (submitBtn) submitBtn.textContent = 'Unlock Tool';
+                            }
+                        } catch (err) {
+                            alert('Network error. Please try again.');
+                            if (submitBtn) submitBtn.textContent = 'Unlock Tool';
+                        }
+                    });
+                }
+            });
+        </script>
         {% endif %}
 
         <!-- Main Content -->
         <main class="main-content">
-            <h1 class="main-title">No Delays, No Doubts,<br><span style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Just Done!</span></h1>
-            <p class="subtitle">Your Smart PDGM Assistant — Free from ReferralMate & ClearChoiceFTF</p>
+            <h1 class="main-title" style="margin-bottom: 2rem;">PDGM Lookup Tool</h1>
 
             <!-- PDGM Lookup Form -->
             <form id="pdgm-form" class="lookup-form" autocomplete="off">
@@ -105,16 +156,14 @@
                     <label for="diagnosis-input" class="form-label">Ask about a diagnosis, ICD-10, or symptom:</label>
                     <div style="position: relative;">
                         <!-- Search icon -->
-                        <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #2563eb; pointer-events: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #2563eb; pointer-events: none;"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
-                        <input type="text"
-                               id="diagnosis-input"
-                               name="diagnosis"
-                               class="form-input"
-                               style="padding-left: 2.5rem;"
-                               placeholder="e.g. CHF exacerbation with skilled SN or E11.65"
-                               required>
+                        <input type="text" id="diagnosis-input" name="diagnosis" class="form-input"
+                            style="padding-left: 2.5rem;" placeholder="e.g. CHF exacerbation with skilled SN or E11.65"
+                            required>
                         <div id="suggestions" class="autocomplete-list" style="display:none;"></div>
                     </div>
                 </div>
@@ -123,19 +172,11 @@
                 <details class="zip-details">
                     <summary class="zip-summary">⚙️ Optional: Add ZIP code for payment estimates</summary>
                     <div class="zip-content">
-                        <input type="text"
-                               id="zip-input"
-                               name="zip_code"
-                               class="zip-input"
-                               placeholder="Enter ZIP code (e.g., 90210)"
-                               pattern="[0-9]{5}(-[0-9]{4})?"
-                               title="Please enter a valid ZIP code">
-                        <input type="number"
-                               id="visit-count-input"
-                               name="visit_count"
-                               class="visit-input"
-                               min="1"
-                               placeholder="Visit count for LUPA alert">
+                        <input type="text" id="zip-input" name="zip_code" class="zip-input"
+                            placeholder="Enter ZIP code (e.g., 90210)" pattern="[0-9]{5}(-[0-9]{4})?"
+                            title="Please enter a valid ZIP code">
+                        <input type="number" id="visit-count-input" name="visit_count" class="visit-input" min="1"
+                            placeholder="Visit count for LUPA alert">
                     </div>
                 </details>
 
@@ -145,14 +186,16 @@
 
                 <button type="submit" class="btn-submit">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                     ASK ME
                 </button>
             </form>
 
             <!-- Results Section -->
-            <div id="results" class="results-section" {% if result %}style="display:block;"{% else %}style="display:none;"{% endif %}>
+            <div id="results" class="results-section" {% if result %}style="display:block;" {% else
+                %}style="display:none;" {% endif %}>
                 <div id="loading" class="loading" style="display: none;">
                     <div class="spinner"></div>
                     <p>Analyzing your query...</p>
@@ -162,8 +205,11 @@
                     {% if result %}
                     <div class="consolidated-results-card">
                         <h3 class="results-title">
-                            <svg class="results-icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            <svg class="results-icon" width="24" height="24" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
                             </svg>
                             PDGM Analysis Results
                         </h3>
@@ -176,19 +222,24 @@
                     {% endif %}
                     {% endif %}
                 </div>
-                
+
                 <!-- Enhanced Documentation Features (Moved outside response-content) -->
-                {% if current_user.is_authenticated %}
-                <div id="roadmap-container" class="roadmap-container" style="display:none; margin-top:1rem; padding: 1rem; border: 2px solid #2563eb; border-radius: 8px; background-color: #f8fafc;">
+                <div id="roadmap-container" class="roadmap-container"
+                    style="display:none; margin-top:1rem; padding: 1rem; border: 2px solid #2563eb; border-radius: 8px; background-color: #f8fafc;">
                     <h4 style="margin-bottom: 0.5rem; color: #2563eb; display: flex; align-items: center;">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 0.5rem;">
-                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
+                            style="margin-right: 0.5rem;">
+                            <path
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         Enhanced Documentation Features
                     </h4>
                     <div style="margin-bottom: 1rem;">
-                        <label for="discipline-select" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Select Disciplines:</label>
-                        <select id="discipline-select" class="discipline-select" multiple size="4" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;">
+                        <label for="discipline-select"
+                            style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Select
+                            Disciplines:</label>
+                        <select id="discipline-select" class="discipline-select" multiple size="4"
+                            style="width: 100%; margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;">
                             <option value="RN/LPN" selected>RN/LPN</option>
                             <option value="PT/OT">PT/OT</option>
                             <option value="ST">ST</option>
@@ -196,68 +247,23 @@
                         </select>
                     </div>
                     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                        <button onclick="showRoadmap()" class="btn-export" style="flex: 1; min-width: 200px;">📑 View Documentation Roadmap</button>
-                        <button onclick="showAssessment()" class="btn-export" style="flex: 1; min-width: 200px;">📝 Generate Sample OASIS Assessment</button>
+                        <button onclick="showRoadmap()" class="btn-export" style="flex: 1; min-width: 200px;">📑 View
+                            Documentation Roadmap</button>
+                        <button onclick="showAssessment()" class="btn-export" style="flex: 1; min-width: 200px;">📝
+                            Generate Sample OASIS Assessment</button>
                     </div>
                 </div>
-                {% endif %}
-                
+
                 <!-- Copy Results -->
                 <div id="export-section" class="export-section" style="display: none;">
-                    <div class="export-buttons" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                    <div class="export-buttons"
+                        style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
                         <button onclick="copyToClipboard()" class="btn-export">Copy to Clipboard</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Value Proposition -->
-            <div class="value-prop">
-                <h2 class="value-title">PDGM Intelligence in Real Time.<br>Know the Group. Nail the Code. Powered by AI.</h2>
-                
-                <div class="cta-section">
-                    <h3>See what ReferralMate & ClearChoiceFTF can do with your real referrals!</h3>
-                    <a href="https://calendly.com/clearchoiceftf/demo" class="btn-cta" target="_blank">Get Full Access — Book a Demo</a>
-                </div>
-                
-                <p class="trial-link">Want PDGM/FTF accuracy across all your referrals? 
-                    <a href="https://calendly.com/clearchoiceftf/trial" target="_blank">Request a Trial Login →</a>
-                </p>
-            </div>
-
-            <!-- Three Cards Section -->
-            <div class="three-cards-section">
-                <div class="cards-container">
-                    <div class="feature-card instant-results">
-                        <div class="card-icon">
-                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="card-title">Instant Results</h3>
-                        <p class="card-description">Get PDGM mappings in seconds with AI-powered accuracy</p>
-                    </div>
-                    
-                    <div class="feature-card trusted-agencies">
-                        <div class="card-icon">
-                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="card-title">Trusted by Agencies</h3>
-                        <p class="card-description">Used by home health agencies nationwide</p>
-                    </div>
-                    
-                    <div class="feature-card always-accurate">
-                        <div class="card-icon">
-                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="card-title">Always Accurate</h3>
-                        <p class="card-description">Based on latest HH PPS Grouper Software PDGM v05.1.24</p>
-                    </div>
-                </div>
-            </div>
+            <!-- Marketing sections removed for simple tool UI -->
             <details class="disclaimer">
                 <summary class="arrow-link">&#x2B05; Disclaimer</summary>
                 <p>
@@ -277,13 +283,7 @@
         </footer>
     </div>
 
-    <!-- Authentication Modal -->
-    <div id="auth-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="closeAuthModal()">&times;</span>
-            <div id="modal-body"></div>
-        </div>
-    </div>
+    <!-- Removed Authentication Modal -->
 
     <div id="roadmap-modal" class="modal" style="display:none;">
         <div class="modal-content">
@@ -317,70 +317,55 @@
         const diagnosisInput = document.getElementById('diagnosis-input');
 
         if (!window.listenersInitialized) {
-        let debounceTimeout;
-        diagnosisInput.addEventListener('input', function() {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(async () => {
-                const val = diagnosisInput.value.trim();
-                const pattern = /^[A-Za-z][0-9A-Za-z]{0,6}(?:\.[0-9A-Za-z]{0,4})?$/;
-                if (!val || !pattern.test(val)) {
-                    suggestionsBox.style.display = 'none';
-                    return;
-                }
-                try {
-                    const resp = await fetch(`/api/suggest?q=${encodeURIComponent(val)}`);
-                    if (resp.status === 429) {
-                        console.warn('Rate limit hit. Backing off...');
+            let debounceTimeout;
+            diagnosisInput.addEventListener('input', function () {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(async () => {
+                    const val = diagnosisInput.value.trim();
+                    const pattern = /^[A-Za-z][0-9A-Za-z]{0,6}(?:\.[0-9A-Za-z]{0,4})?$/;
+                    if (!val || !pattern.test(val)) {
+                        suggestionsBox.style.display = 'none';
                         return;
                     }
-                    if (!resp.ok) return;
-                    const data = await resp.json();
-                    if (data.results.length) {
-                        suggestionsBox.innerHTML = data.results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
-                    } else {
-                        suggestionsBox.innerHTML = '<div class="autocomplete-item">No match</div>';
+                    try {
+                        const resp = await fetch(`/api/suggest?q=${encodeURIComponent(val)}`);
+                        if (resp.status === 429) {
+                            console.warn('Rate limit hit. Backing off...');
+                            return;
+                        }
+                        if (!resp.ok) return;
+                        const data = await resp.json();
+                        if (data.results.length) {
+                            suggestionsBox.innerHTML = data.results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
+                        } else {
+                            suggestionsBox.innerHTML = '<div class="autocomplete-item">No match</div>';
+                        }
+                        suggestionsBox.style.display = 'block';
+                    } catch (e) {
+                        suggestionsBox.style.display = 'none';
                     }
-                    suggestionsBox.style.display = 'block';
-                } catch (e) {
+                }, 300);
+            });
+
+            suggestionsBox.addEventListener('click', function (e) {
+                const item = e.target.closest('.autocomplete-item');
+                if (!item) return;
+                const code = item.dataset.code;
+                if (code) {
+                    diagnosisInput.value = code;
+                    suggestionsBox.style.display = 'none';
+                    diagnosisInput.focus();
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                if (e.target !== diagnosisInput && !suggestionsBox.contains(e.target)) {
                     suggestionsBox.style.display = 'none';
                 }
-            }, 300);
-        });
+            });
+            // Form submit handler removed, delegated to enhanced_query_progress.js
 
-        suggestionsBox.addEventListener('click', function(e) {
-            const item = e.target.closest('.autocomplete-item');
-            if (!item) return;
-            const code = item.dataset.code;
-            if (code) {
-                diagnosisInput.value = code;
-                suggestionsBox.style.display = 'none';
-                diagnosisInput.focus();
-            }
-        });
-
-        document.addEventListener('click', function(e) {
-            if (e.target !== diagnosisInput && !suggestionsBox.contains(e.target)) {
-                suggestionsBox.style.display = 'none';
-            }
-        });
-
-        document.getElementById('pdgm-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const diagnosis = document.getElementById('diagnosis-input').value.trim();
-            const zipCode = document.getElementById('zip-input').value.trim();
-            const visitCount = document.getElementById('visit-count-input').value.trim();
-
-            if (!diagnosis) {
-                alert('Please enter a diagnosis, ICD-10 code, or symptom.');
-                return;
-            }
-
-            window.currentQuery = diagnosis;
-            await submitQuery(diagnosis, zipCode, visitCount);
-        });
-
-        window.listenersInitialized = true;
+            window.listenersInitialized = true;
         }
 
         // Submit query to backend
@@ -388,12 +373,12 @@
             const resultsSection = document.getElementById('results');
             const loading = document.getElementById('loading');
             const responseContent = document.getElementById('response-content');
-            
+
             // Show results section and loading
             resultsSection.style.display = 'block';
             loading.style.display = 'block';
             responseContent.innerHTML = '';
-            
+
             // Hide export sections initially
             const exportSection = document.getElementById('export-section');
             const registrationPrompt = document.getElementById('registration-prompt');
@@ -401,7 +386,7 @@
             if (exportSection) exportSection.style.display = 'none';
             if (registrationPrompt) registrationPrompt.style.display = 'none';
             if (roadmapContainer) roadmapContainer.style.display = 'none';
-            
+
             try {
                 const response = await fetch('/api/lookup', {
                     method: 'POST',
@@ -409,12 +394,12 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        diagnosis: diagnosis,
+                        query: diagnosis,
                         zip_code: zipCode,
                         visit_count: visitCount
                     })
                 });
-                
+
                 if (response.status === 429) {
                     responseContent.innerHTML = '<div class="error">Too many requests. Please wait.</div>';
                     loading.style.display = 'none';
@@ -422,18 +407,14 @@
                     return;
                 }
                 const data = await response.json();
-                
+
                 if (data.success) {
                     window.currentResults = data;
                     displayResults(data);
-                    
+
                     // Show appropriate export section
-                    {% if current_user.is_authenticated %}
                     if (exportSection) exportSection.style.display = 'block';
                     if (roadmapContainer) roadmapContainer.style.display = 'block';
-                    {% else %}
-                    if (registrationPrompt) registrationPrompt.style.display = 'block';
-                    {% endif %}
                 } else {
                     responseContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
                 }
@@ -445,194 +426,46 @@
             }
         }
 
-        // Parse and structure the results text
-        function parseResults(text) {
-            const lines = text.split('\n');
-            const sections = {
-                pdgm: [],
-                payment: [],
-                lupa: null
-            };
-            
-            let currentSection = 'pdgm';
-            
-            for (let line of lines) {
-                line = line.trim();
-                if (!line) continue;
-                
-                if (line.includes('ESTIMATED REIMBURSEMENT:')) {
-                    currentSection = 'payment';
-                    continue;
-                }
-                
-                if (line.includes('LUPA Alert:')) {
-                    sections.lupa = line;
-                    continue;
-                }
-                
-                if (line.includes('Estimate only.')) {
-                    sections.payment.push(line);
-                    continue;
-                }
-                
-                if (currentSection === 'pdgm') {
-                    sections.pdgm.push(line);
-                } else if (currentSection === 'payment') {
-                    sections.payment.push(line);
-                }
-            }
-            
-            return sections;
-        }
-
-        // Create structured HTML for PDGM analysis
-        function createPdgmSection(pdgmLines) {
-            if (!pdgmLines.length) return '';
-            
-            let html = `
-                <div class="results-section-card pdgm-section">
-                    <div class="section-header">
-                        <svg class="section-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <h4 class="section-title">PDGM Analysis</h4>
-                    </div>
-                    <div class="section-content">
-            `;
-            
-            for (let line of pdgmLines) {
-                if (line.startsWith('Focus of Care:')) {
-                    html += `<div class="info-row focus-row">
-                        <span class="info-label">Focus of Care:</span>
-                        <span class="info-value focus-value">${line.replace('Focus of Care:', '').trim()}</span>
-                    </div>`;
-                } else if (line.includes(':')) {
-                    const [label, value] = line.split(':', 2);
-                    const cleanLabel = label.trim();
-                    const cleanValue = value.trim();
-                    
-                    let rowClass = 'info-row';
-                    let valueClass = 'info-value';
-                    
-                    if (cleanLabel === 'PDGM Group') {
-                        rowClass += ' pdgm-group-row';
-                        valueClass += ' pdgm-group-value';
-                    } else if (cleanLabel === 'Billable') {
-                        rowClass += ' billable-row';
-                        valueClass += cleanValue.toLowerCase().includes('yes') ? ' billable-yes' : ' billable-no';
-                    } else if (cleanLabel === 'ICD-10') {
-                        valueClass += ' icd-code';
-                    }
-                    
-                    html += `<div class="${rowClass}">
-                        <span class="info-label">${cleanLabel}:</span>
-                        <span class="${valueClass}">${cleanValue}</span>
-                    </div>`;
-                }
-            }
-            
-            html += `
-                    </div>
-                </div>
-            `;
-            
-            return html;
-        }
-
-        // Create structured HTML for payment information
-        function createPaymentSection(paymentLines) {
-            if (!paymentLines.length) return '';
-            
-            let html = `
-                <div class="results-section-card payment-section">
-                    <div class="section-header">
-                        <svg class="section-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
-                        <h4 class="section-title">Payment Estimate</h4>
-                    </div>
-                    <div class="section-content">
-            `;
-            
-            for (let line of paymentLines) {
-                if (line.includes(':') && !line.includes('Estimate only')) {
-                    const [label, value] = line.split(':', 2);
-                    const cleanLabel = label.trim();
-                    const cleanValue = value.trim();
-                    
-                    let rowClass = 'info-row';
-                    let valueClass = 'info-value';
-                    
-                    if (cleanLabel === 'Payment Amount') {
-                        rowClass += ' payment-amount-row';
-                        valueClass += ' payment-amount-value';
-                    } else if (cleanLabel.includes('Rate') || cleanLabel.includes('Multiplier') || cleanLabel.includes('Index')) {
-                        valueClass += ' payment-detail-value';
-                    }
-                    
-                    html += `<div class="${rowClass}">
-                        <span class="info-label">${cleanLabel}:</span>
-                        <span class="${valueClass}">${cleanValue}</span>
-                    </div>`;
-                } else if (line.includes('Estimate only')) {
-                    html += `<div class="payment-disclaimer">${line}</div>`;
-                }
-            }
-            
-            html += `
-                    </div>
-                </div>
-            `;
-            
-            return html;
-        }
-
-        // Create structured HTML for LUPA alert
-        function createLupaSection(lupaText) {
-            if (!lupaText) return '';
-            
-            return `
-                <div class="results-section-card lupa-section">
-                    <div class="section-header lupa-header">
-                        <svg class="section-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                        </svg>
-                        <h4 class="section-title">LUPA Alert</h4>
-                    </div>
-                    <div class="section-content">
-                        <div class="lupa-alert">
-                            ${lupaText.replace('⚠️', '')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Display results with new structured layout
+        // Display results with structured JSON data
         function displayResults(data) {
             const responseContent = document.getElementById('response-content');
-            const sections = parseResults(data.response);
-            
+
+            const icd10 = data.icd10 || data.icd_code || 'Not specified';
+            const pdgmGroup = data.raw?.pdgm_clinical_group_name || data.pdgm_group || 'Not determined';
+            const description = data.raw?.description || data.description || 'No description available';
+
             let html = `
                 <div class="consolidated-results-card">
                     <div class="results-header">
                         <svg class="results-icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
-                        <h3 class="results-title">Complete Analysis Results</h3>
+                        <h3 class="results-title">PDGM Analysis Complete</h3>
                     </div>
                     
                     <div class="results-grid">
-                        ${createPdgmSection(sections.pdgm)}
-                        ${createPaymentSection(sections.payment)}
-                        ${createLupaSection(sections.lupa)}
+                        <div class="result-section pdgm-section">
+                            <div class="section-header">
+                                <h4 class="section-title">PDGM Details</h4>
+                            </div>
+                            <div class="section-content">
+                                <div class="detail-row">
+                                    <span class="detail-label">ICD-10 Code:</span>
+                                    <span class="detail-value highlight-value">${icd10}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Clinical Group:</span>
+                                    <span class="detail-value">${pdgmGroup}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Description:</span>
+                                    <span class="detail-value">${description}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
-
-            if (data.follow_up) {
-                html += `<div class="followup">${data.follow_up}</div>`;
-            }
 
             responseContent.innerHTML = html;
         }
@@ -641,7 +474,7 @@
         function openAuthModal(type) {
             const modal = document.getElementById('auth-modal');
             const modalBody = document.getElementById('modal-body');
-            
+
             if (type === 'login') {
                 modalBody.innerHTML = `
                     <h2>Login</h2>
@@ -659,7 +492,7 @@
                     window.location.href = '/auth/register';
                 }, 1000);
             }
-            
+
             modal.style.display = 'block';
         }
 
@@ -667,11 +500,10 @@
             document.getElementById('auth-modal').style.display = 'none';
         }
 
-        // Export Functions (for authenticated users)
-        {% if current_user.is_authenticated %}
+        // Export Functions (for all users)
         async function exportToPDF() {
             if (!window.currentResults) return;
-            
+
             try {
                 const form = new URLSearchParams();
                 form.append('query', window.currentQuery);
@@ -683,7 +515,7 @@
                     },
                     body: form.toString()
                 });
-                
+
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -700,7 +532,7 @@
 
         async function exportToExcel() {
             if (!window.currentResults) return;
-            
+
             try {
                 const form = new URLSearchParams();
                 form.append('query', window.currentQuery);
@@ -712,7 +544,7 @@
                     },
                     body: form.toString()
                 });
-                
+
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -729,10 +561,10 @@
 
         async function emailResults() {
             if (!window.currentResults) return;
-            
+
             const email = prompt('Enter email address to send results:');
             if (!email) return;
-            
+
             try {
                 const response = await fetch('/export/email', {
                     method: 'POST',
@@ -745,7 +577,7 @@
                         response: window.currentResults.response
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.success) {
                     alert('Results sent successfully!');
@@ -759,9 +591,9 @@
 
         function copyToClipboard() {
             if (!window.currentResults) return;
-            
+
             const text = `PDGM Lookup Results\n\nQuery: ${window.currentQuery}\n\nResults:\n${window.currentResults.response}`;
-            
+
             navigator.clipboard.writeText(text).then(() => {
                 alert('Results copied to clipboard!');
             }).catch(() => {
@@ -776,7 +608,7 @@
 
         async function showRoadmap() {
             if (!window.currentResults) return;
-            const pdgmGroup = extractPdgmGroup(window.currentResults.response);
+            const pdgmGroup = window.currentResults.raw?.pdgm_clinical_group_name || window.currentResults.pdgm_group || '';
             const select = document.getElementById('discipline-select');
             const disciplines = Array.from(select.selectedOptions).map(o => o.value);
             try {
@@ -790,11 +622,11 @@
                     })
                 });
                 const data = await resp.json();
-                if (data.success) {
+                if (data.roadmap) {
                     document.getElementById('roadmap-body').innerText = data.roadmap;
                     document.getElementById('roadmap-modal').style.display = 'block';
                 } else {
-                    alert('Error generating roadmap.');
+                    alert(data.error || 'Error generating roadmap.');
                 }
             } catch (e) {
                 alert('Network error.');
@@ -803,7 +635,7 @@
 
         async function showAssessment() {
             if (!window.currentResults) return;
-            const pdgmGroup = extractPdgmGroup(window.currentResults.response);
+            const pdgmGroup = window.currentResults.raw?.pdgm_clinical_group_name || window.currentResults.pdgm_group || '';
             const select = document.getElementById('discipline-select');
             const disciplines = Array.from(select.selectedOptions).map(o => o.value);
             try {
@@ -817,11 +649,11 @@
                     })
                 });
                 const data = await resp.json();
-                if (data.success) {
+                if (data.assessment) {
                     document.getElementById('assessment-body').innerText = data.assessment;
                     document.getElementById('assessment-modal').style.display = 'block';
                 } else {
-                    alert('Error generating assessment.');
+                    alert(data.error || 'Error generating assessment.');
                 }
             } catch (e) {
                 alert('Network error.');
@@ -865,10 +697,8 @@
             w.print();
             w.close();
         }
-        {% endif %}
-
         // Close modal when clicking outside
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const authModal = document.getElementById('auth-modal');
             const roadmapModal = document.getElementById('roadmap-modal');
             const assessmentModal = document.getElementById('assessment-modal');
@@ -883,11 +713,12 @@
             }
         }
 
+
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
+            window.addEventListener('load', function () {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(function(registration) {
+                    .then(function (registration) {
                         console.log('ServiceWorker registration successful');
                         if (registration.active) {
                             const channel = new MessageChannel();
@@ -897,114 +728,20 @@
                             registration.active.postMessage({ type: 'SKIP_WAITING' }, [channel.port2]);
                         }
                     })
-                    .catch(function(err) {
+                    .catch(function (err) {
                         console.log('ServiceWorker registration failed');
                     });
             });
         }
     </script>
 
-    <script>
-    function performLogout(event) {
-        // Show loading state (optional)
-        const logoutLink = (event && event.target) ? event.target : this;
-        const originalText = logoutLink && logoutLink.textContent ? logoutLink.textContent : 'Logout';
-        logoutLink.textContent = 'Logging out...';
-        logoutLink.style.pointerEvents = 'none';
-
-        // Perform logout request
-        fetch('/auth/logout', {
-            method: 'GET',
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        }).then(response => {
-            // Force complete page reload with cache bust
-            const cacheBust = Date.now();
-            window.location.href = '/?_cb=' + cacheBust;
-        }).catch(error => {
-            console.error('Logout error:', error);
-            // Fallback to direct navigation
-            window.location.href = '/auth/logout?_cb=' + Date.now();
-        });
-    }
-    </script>
-
-    <script>
-    // Robust binding: ensure logout works even if inline handlers are blocked
-    document.addEventListener('DOMContentLoaded', function() {
-        var logoutEl = document.getElementById('logout-link');
-        if (logoutEl) {
-            logoutEl.addEventListener('click', function(e) {
-                // Allow modifier-clicks to open in new tab/window
-                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-                    return;
-                }
-                e.preventDefault();
-                try { performLogout(e); } catch (err) {
-                    // Fallback: direct navigation with cache-bust
-                    window.location.href = '/auth/logout?_cb=' + Date.now();
-                }
-            }, { capture: false });
-        }
-    });
-    </script>
-
-    <script>
-    // Authentication state verification and cache busting
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const authSuccess = urlParams.get('auth');
-        const timestamp = urlParams.get('_t');
-
-        if (authSuccess === 'success' && timestamp) {
-            // Clean up URL parameters to keep URL clean
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-
-            // Verify authentication state is properly displayed
-            setTimeout(function() {
-                const authElements = document.querySelectorAll('.user-name');
-                const welcomeMessage = document.querySelector('.welcome-message');
-                const loginButtons = document.querySelectorAll('.btn-login');
-
-                // Check if we should be seeing authenticated content
-                if (authElements.length === 0 && loginButtons.length > 0) {
-                    // Authentication state not properly displayed, force refresh
-                    console.log('Authentication state mismatch detected, refreshing page...');
-                    window.location.reload();
-                }
-            }, 100);
-        }
-
-        // Additional check for authentication state consistency
-        const authState = document.querySelector('meta[name="auth-state"]');
-        if (authState && authState.content === 'authenticated') {
-            const userElements = document.querySelectorAll('.user-name');
-            if (userElements.length === 0) {
-                // Server says authenticated but UI shows otherwise
-                console.log('Server-client auth state mismatch, refreshing...');
-                window.location.reload();
-            }
-        }
-    });
-
-    // Prevent back button cache issues
-    window.addEventListener('pageshow', function(event) {
-        if (event.persisted) {
-            // Page was loaded from cache, reload to ensure fresh auth state
-            window.location.reload();
-        }
-    });
-    </script>
+    <!-- Auth state verification JS removed -->
     <!-- Enhanced Loading Indicators -->
-    <script src="{{ url_for('static', filename='enhanced_query_progress.js') }}"></script>
-    <script src="{{ url_for('static', filename='universal_navigation.js') }}"></script>
-    <script src="{{ url_for('static', filename='loading-improvements.js') }}"></script>
+    <script src="/static/universal_navigation.js?v=4"></script>
+    <script src="/static/enhanced_query_progress.js?v=4"></script>
+    <script src="/static/fixed_interactive_followup.js?v=4"></script>
+    <script src="/static/loading-improvements.js?v=4"></script>
     <script src="{{ url_for('static', filename='fixed_interactive_followup.js') }}"></script>
 </body>
+
 </html>
-
-

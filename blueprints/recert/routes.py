@@ -1,24 +1,28 @@
-from flask import request, render_template, redirect, url_for, flash, Response
-from flask_login import login_required
+from flask import request, render_template, redirect, url_for, flash, Response, session
 from datetime import datetime, timedelta
 from . import bp
 
 
 @bp.route('/recert', methods=['GET', 'POST'])
 def recert():
-    due = None
-    soc = ''
-    length = 60
+    result = None
+    soc_date_input = ''
+    episode_length_input = 60
     if request.method == 'POST':
-        soc = request.form.get('soc_date', '')
-        length = int(request.form.get('episode_length', 60))
+        soc_date_input = request.form.get('soc_date', '')
+        episode_length_input = int(request.form.get('episode_length', 60))
         try:
-            start = datetime.strptime(soc, '%Y-%m-%d').date()
-            due_date = start + timedelta(days=length)
-            due = due_date.strftime('%B %d, %Y')
+            start = datetime.strptime(soc_date_input, '%Y-%m-%d').date()
+            due_date = start + timedelta(days=episode_length_input)
+            result = due_date.strftime('%B %d, %Y')
         except ValueError:
             flash('Invalid date.')
-    return render_template('recert.html', due=due, soc=soc, length=length)
+    return render_template('recert.html',
+                             result=result,
+                             soc_date_input=soc_date_input,
+                             episode_length_input=episode_length_input,
+                             lead_captured=session.get('lead_captured', False),
+                             lead_email=session.get('lead_email', ''))
 
 
 @bp.route('/recert/ics')

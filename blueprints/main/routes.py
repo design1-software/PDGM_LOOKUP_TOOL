@@ -1,5 +1,5 @@
 from flask import request, redirect, url_for, flash, render_template, session, get_flashed_messages
-from flask_login import current_user
+# removed flask_login import
 from . import bp
 
 from app import (
@@ -121,4 +121,6 @@ def index():
         query=query,
         zip_code=zip_code,
         visit_count_value=visit_count_input,
+        lead_captured=session.get('lead_captured', False),
+        lead_email=session.get('lead_email', ''),
     )

@@ -60,3 +60,16 @@ def api_assessment():
     except Exception as e:
         current_app.logger.error(f'/api/assessment error: {e}')
         return jsonify({'error': 'failed to generate assessment'}), 500
+
+@bp.get('/api/suggest')
+def api_suggest():
+    try:
+        q = request.args.get('q', '').strip()
+        if not q or len(q) < 3:
+            return jsonify({'success': True, 'suggestions': []})
+        from app import search_icd10_codes
+        results = search_icd10_codes(q)
+        return jsonify({'success': True, 'suggestions': results})
+    except Exception as e:
+        current_app.logger.error(f'/api/suggest error: {e}')
+        return jsonify({'error': 'failed to load suggestions'}), 500

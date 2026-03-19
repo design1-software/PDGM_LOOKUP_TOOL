@@ -21,14 +21,14 @@ class PDGMQueryProgress {
     }
 
     init() {
-        // Only enhance if the original form exists
-        const form = document.querySelector('form');
+        // Only enhance if the main lookup form exists
+        const form = document.getElementById('pdgm-form');
         let askButton = document.querySelector('button[type="submit"], .ask-button');
         if (!askButton) {
             const buttons = document.querySelectorAll('button');
             askButton = Array.from(buttons).find(btn => btn.textContent.trim().toUpperCase() === 'ASK ME');
         }
-        
+
         if (form && askButton) {
             this.enhanceForm(form, askButton);
         }
@@ -37,10 +37,10 @@ class PDGMQueryProgress {
     enhanceForm(form, askButton) {
         // Store original submit handler
         this.originalSubmitHandler = form.onsubmit;
-        
+
         // Add enhanced progress UI after the form
         this.createProgressUI(form);
-        
+
         // Enhance form submission
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -53,7 +53,7 @@ class PDGMQueryProgress {
         progressContainer.id = 'enhanced-progress-container';
         progressContainer.className = 'enhanced-progress-container';
         progressContainer.style.display = 'none';
-        
+
         progressContainer.innerHTML = `
             <div class="progress-header">
                 <h3>Processing Your Query</h3>
@@ -90,21 +90,23 @@ class PDGMQueryProgress {
                 <div class="query-preview">Query: <span class="query-text"></span></div>
             </div>
         `;
-        
+
         form.parentNode.insertBefore(progressContainer, form.nextSibling);
     }
 
     async handleSubmit(form) {
         const formData = new FormData(form);
-        const diagnosis = formData.get('diagnosis') || formData.get('query') || '';
-        
+        const diagnosis = formData.get('query') || formData.get('diagnosis') || '';
+
+        window.currentQuery = diagnosis;
+
         if (!diagnosis.trim()) {
             alert('Please enter a diagnosis or symptom to analyze.');
             return;
         }
 
         this.startProgress(diagnosis);
-        
+
         try {
             // Call original submit logic or make API request
             const result = await this.makeAPIRequest(formData);
@@ -117,23 +119,23 @@ class PDGMQueryProgress {
     startProgress(diagnosis) {
         this.startTime = Date.now();
         this.currentStage = 0;
-        
+
         // Show progress container
         const container = document.getElementById('enhanced-progress-container');
         container.style.display = 'block';
-        
+
         // Update query preview
         container.querySelector('.query-text').textContent = diagnosis;
-        
+
         // Hide original loading indicator if it exists
         const originalLoading = document.querySelector('.loading-indicator, .spinner');
         if (originalLoading) {
             originalLoading.style.display = 'none';
         }
-        
+
         // Start progress animation
         this.animateProgress();
-        
+
         // Set timeout for long-running queries
         this.timeoutId = setTimeout(() => {
             this.handleTimeout();
@@ -144,7 +146,7 @@ class PDGMQueryProgress {
         this.progressInterval = setInterval(() => {
             this.updateProgressDisplay();
         }, 100);
-        
+
         // Advance through stages
         this.advanceStages();
     }
@@ -154,13 +156,13 @@ class PDGMQueryProgress {
             if (this.currentRequest && this.currentRequest.aborted) {
                 break;
             }
-            
+
             this.currentStage = i;
             this.updateStageDisplay(i);
-            
+
             // Wait for stage duration
             await new Promise(resolve => setTimeout(resolve, this.progressStages[i].duration));
-            
+
             // Mark stage as complete
             this.completeStage(i);
         }
@@ -169,12 +171,12 @@ class PDGMQueryProgress {
     updateProgressDisplay() {
         const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
         const container = document.getElementById('enhanced-progress-container');
-        
+
         if (container) {
             container.querySelector('.time-elapsed').textContent = `${elapsed}s`;
-            container.querySelector('.current-stage-text').textContent = 
+            container.querySelector('.current-stage-text').textContent =
                 this.progressStages[this.currentStage]?.name || 'Processing...';
-            
+
             // Update progress bar
             const progress = Math.min(((this.currentStage + 1) / this.progressStages.length) * 100, 95);
             container.querySelector('.progress-fill').style.width = `${progress}%`;
@@ -203,44 +205,60 @@ class PDGMQueryProgress {
         // Create AbortController for cancellation
         const controller = new AbortController();
         this.currentRequest = controller;
-        
+
         const response = await fetch('/api/lookup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                diagnosis: formData.get('diagnosis') || formData.get('query'),
+                query: formData.get('query') || formData.get('diagnosis') || '',
                 zip_code: formData.get('zip_code') || ''
             }),
             signal: controller.signal
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         return await response.json();
     }
 
     completeProgress(result) {
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
-        
+
         // Complete all stages
         for (let i = 0; i < this.progressStages.length; i++) {
             this.completeStage(i);
         }
-        
+
         // Update progress bar to 100%
         const container = document.getElementById('enhanced-progress-container');
         container.querySelector('.progress-fill').style.width = '100%';
         container.querySelector('.current-stage-text').textContent = 'Complete!';
-        
+
         // Hide progress after a moment and show results
         setTimeout(() => {
             container.style.display = 'none';
-            this.displayResults(result);
+            window.currentResults = result;
+
+            // Show the results section container
+            const resultsSection = document.getElementById('results');
+            if (resultsSection) resultsSection.style.display = 'block';
+
+            if (window.displayResults) {
+                window.displayResults(result);
+            } else {
+                this.displayResults(result);
+            }
+
+            // Show documentation roadmap & export buttons
+            const roadmapContainer = document.getElementById('roadmap-container');
+            if (roadmapContainer) roadmapContainer.style.display = 'block';
+            const exportSection = document.getElementById('export-section');
+            if (exportSection) exportSection.style.display = 'block';
         }, 1000);
     }
 
@@ -251,9 +269,9 @@ class PDGMQueryProgress {
             resultsContainer = document.createElement('div');
             resultsContainer.id = 'query-results';
             resultsContainer.className = 'query-results';
-            document.querySelector('form').parentNode.appendChild(resultsContainer);
+            document.getElementById('pdgm-form').parentNode.appendChild(resultsContainer);
         }
-        
+
         resultsContainer.innerHTML = `
             <div class="results-header">
                 <h3>PDGM Analysis Complete</h3>
@@ -267,7 +285,7 @@ class PDGMQueryProgress {
                 <button type="button" onclick="pdgmProgress.exportResults()">Export Results</button>
             </div>
         `;
-        
+
         resultsContainer.style.display = 'block';
     }
 
@@ -275,7 +293,7 @@ class PDGMQueryProgress {
         if (result.error) {
             return `<div class="error-message">${result.error}</div>`;
         }
-        
+
         return `
             <div class="result-item">
                 <label>PDGM Group:</label>
@@ -311,7 +329,7 @@ class PDGMQueryProgress {
     handleError(error) {
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
-        
+
         const container = document.getElementById('enhanced-progress-container');
         container.innerHTML = `
             <div class="error-container">
@@ -343,22 +361,26 @@ class PDGMQueryProgress {
         if (this.currentRequest) {
             this.currentRequest.abort();
         }
-        
+
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
-        
+
         const container = document.getElementById('enhanced-progress-container');
         container.style.display = 'none';
-        
-        // Show original form
-        document.querySelector('form').style.display = 'block';
+
+        // Show main form
+        const form = document.getElementById('pdgm-form');
+        if (form) form.style.display = 'block';
     }
 
     newQuery() {
         this.cancelQuery();
-        document.querySelector('form input[type="text"]').value = '';
-        document.querySelector('form input[type="text"]').focus();
-        
+        const input = document.querySelector('#pdgm-form input[name="query"]');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+
         // Hide results
         const results = document.getElementById('query-results');
         if (results) {
@@ -367,7 +389,7 @@ class PDGMQueryProgress {
     }
 
     retryQuery() {
-        const form = document.querySelector('form');
+        const form = document.getElementById('pdgm-form');
         this.handleSubmit(form);
     }
 
@@ -376,7 +398,7 @@ class PDGMQueryProgress {
         this.timeoutId = setTimeout(() => {
             this.handleTimeout();
         }, 30000);
-        
+
         // Restore progress display
         this.startProgress(document.querySelector('.query-text').textContent);
     }
@@ -391,7 +413,7 @@ class PDGMQueryProgress {
         // Export functionality
         const results = document.getElementById('query-results');
         const text = results.textContent;
-        
+
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -403,13 +425,13 @@ class PDGMQueryProgress {
 }
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     window.pdgmProgress = new PDGMQueryProgress();
 });
 
 // Fallback for pages that load content dynamically
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         if (!window.pdgmProgress) {
             window.pdgmProgress = new PDGMQueryProgress();
         }
