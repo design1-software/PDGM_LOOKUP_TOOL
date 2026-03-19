@@ -434,12 +434,12 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="soc_date" class="form-label">Start of Care (SOC) Date</label>
-                            <input type="date" id="soc_date" name="soc_date" class="form-input" required>
+                            <input type="date" id="soc_date" name="soc_date" class="form-input" value="{{ soc }}" required>
                         </div>
                         
                         <div class="form-group">
                             <label for="episode_length" class="form-label">Episode Length (Days)</label>
-                            <input type="number" id="episode_length" name="episode_length" class="form-input" min="1" value="60" placeholder="60">
+                            <input type="number" id="episode_length" name="episode_length" class="form-input" min="1" value="{{ length }}" placeholder="60">
                         </div>
                     </div>
                     
@@ -461,7 +461,14 @@
                     ⛔ If missed: patient must be discharged and re-admitted — triggering billing reset.
                 </p>
                 
+                {% if days_remaining is not none %}
+                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: {% if days_remaining <= 7 %}#dc2626{% elif days_remaining <= 14 %}#f59e0b{% else %}#10b981{% endif %};">
+                    {{ days_remaining }} days remaining
+                </p>
+                {% endif %}
+
                 <div class="action-buttons">
+                    <a href="{{ url_for('recert.recert_download') }}?soc={{ soc }}&length={{ length }}" class="action-button" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">Download Summary</a>
                     <a href="{{ url_for('recert.recert_ics') }}?soc={{ soc }}&length={{ length }}" class="action-button">Add to Calendar</a>
                     <form method="POST" action="{{ url_for('recert.recert_email') }}" class="email-form">
                         <input type="hidden" name="soc_date" value="{{ soc }}">
