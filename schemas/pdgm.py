@@ -35,7 +35,17 @@ def validate_lookup_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError("Body must be a JSON object")
     q = _ensure_str(payload.get("query", ""), "query")
-    return {"query": q}
+    zip_code = payload.get("zip_code", "")
+    if isinstance(zip_code, str):
+        zip_code = zip_code.strip()
+    else:
+        zip_code = ""
+    visit_count = payload.get("visit_count", "")
+    try:
+        visit_count = int(visit_count) if visit_count else None
+    except (ValueError, TypeError):
+        visit_count = None
+    return {"query": q, "zip_code": zip_code, "visit_count": visit_count}
 
 def validate_roadmap_request(payload: dict) -> dict:
     if not isinstance(payload, dict):

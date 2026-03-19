@@ -1,7 +1,7 @@
 """
 Core PDGM lookup logic.
 
-This module provides the CSV-driven PDGM lookup, OpenAI AI mapping,
+This module provides the CSV-driven PDGM lookup, Claude AI mapping,
 follow-up question generation, and documentation/assessment helpers.
 It is imported by blueprints — it does NOT create a Flask app.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 
-from openai import OpenAI, RateLimitError, OpenAIError
+import anthropic
 
 from services.reimbursement_service import (
     ReimbursementService,
@@ -32,9 +32,8 @@ import enhanced_prompt_manager as prompt_manager
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo")
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "gpt-4")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 AI_LOG_PATH = Path(os.getenv("AI_LOG_PATH", "ai_logs.jsonl"))
 
 _root = Path(__file__).resolve().parent
@@ -196,14 +195,26 @@ def is_valid_ai_response(response):
     return True
 
 # ---------------------------------------------------------------------------
-# OpenAI client + AI functions
+# Anthropic client + AI functions
 # ---------------------------------------------------------------------------
-client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+
+def _call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 350, temperature: float = 0.1) -> str:
+    """Helper to call Claude API."""
+    resp = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=max_tokens,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+        temperature=temperature,
+    )
+    return resp.content[0].text.strip()
 
 
 def ai_map_phrase_to_code(phrase):
     if not client:
-        return "OpenAI API key not configured."
+        return "Anthropic API key not configured."
     system_prompt = (
         "You are a Utilization Review and Coding Compliance Nurse with 20+ years of Home Health experience, certified in HCS-D, HCS-O, CCS, and Medicare billing. "
         "Given a clinical phrase, select only PDGM-valid ICD-10 code(s) from the provided list, recognizing synonymous phrasing, "
@@ -230,31 +241,15 @@ def ai_map_phrase_to_code(phrase):
         "Return the closest code(s) in the specified format."
     )
 
-    def call_model(model_name):
-        resp = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.1,
-            max_tokens=350,
-        )
-        return resp.choices[0].message.content.strip()
-
     try:
-        text = call_model(OPENAI_MODEL)
+        text = _call_claude(system_prompt, user_prompt, max_tokens=350)
         valid, mismatches = validate_ai_output(text)
-        log_ai_interaction(OPENAI_MODEL, phrase, text, mismatches)
-        if not valid:
-            text = call_model(FALLBACK_MODEL)
-            valid, mismatches = validate_ai_output(text)
-            log_ai_interaction(FALLBACK_MODEL, phrase, text, mismatches)
+        log_ai_interaction(CLAUDE_MODEL, phrase, text, mismatches)
         return text
-    except RateLimitError:
-        return "OpenAI rate limit exceeded. Please try again later."
-    except OpenAIError as e:
-        return f"OpenAI error: {e}"
+    except anthropic.RateLimitError:
+        return "Rate limit exceeded. Please try again later."
+    except anthropic.APIError as e:
+        return f"AI error: {e}"
 
 
 def ai_followup_question(phrase: str) -> str:
@@ -264,18 +259,12 @@ def ai_followup_question(phrase: str) -> str:
     if not client:
         return fallback_response
     try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": "You are a medical coding specialist helping refine ICD-10 selection for home health PDGM coding. ALWAYS provide helpful follow-up questions with specific options."},
-                {"role": "user", "content": f"Medical term: '{phrase}' - What follow-up questions would help specify this for accurate ICD-10 coding?"},
-            ],
-            temperature=0.7,
+        return _call_claude(
+            "You are a medical coding specialist helping refine ICD-10 selection for home health PDGM coding. ALWAYS provide helpful follow-up questions with specific options.",
+            f"Medical term: '{phrase}' - What follow-up questions would help specify this for accurate ICD-10 coding?",
             max_tokens=120,
+            temperature=0.7,
         )
-        ai_response = resp.choices[0].message.content.strip()
-        if ai_response and ai_response.lower() not in ['none', 'n/a', 'not applicable']:
-            return ai_response
     except Exception:
         pass
     return fallback_response
@@ -303,33 +292,21 @@ def extract_pdgm_info_from_response(pdgm_response):
 
 def ai_documentation_roadmap(diagnosis: str, pdgm_group: str, disciplines: list):
     if not client:
-        return "OpenAI API key not configured."
+        return "Anthropic API key not configured."
     try:
         system_prompt = prompt_manager.build_system_prompt("roadmap", pdgm_group, diagnosis, disciplines)
         user_prompt = f"Diagnosis: {diagnosis}\nPDGM Group: {pdgm_group}\nDisciplines: {', '.join(disciplines)}"
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-            temperature=0.1,
-            max_tokens=1000,
-        )
-        return resp.choices[0].message.content.strip()
+        return _call_claude(system_prompt, user_prompt, max_tokens=1000)
     except Exception as e:
-        return f"OpenAI error: {e}"
+        return f"AI error: {e}"
 
 
 def ai_sample_oasis_assessment(diagnosis: str, pdgm_group: str, disciplines: list = None):
     if not client:
-        return "OpenAI API key not configured."
+        return "Anthropic API key not configured."
     try:
         system_prompt = prompt_manager.build_system_prompt("oasis", pdgm_group, diagnosis, disciplines or [])
         user_prompt = f"Diagnosis: {diagnosis}\nPDGM Group: {pdgm_group}"
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-            temperature=0.1,
-            max_tokens=1000,
-        )
-        return resp.choices[0].message.content.strip()
+        return _call_claude(system_prompt, user_prompt, max_tokens=1000)
     except Exception as e:
-        return f"OpenAI error: {e}"
+        return f"AI error: {e}"

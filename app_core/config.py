@@ -7,10 +7,9 @@ class Config:
     CACHE_TYPE = 'SimpleCache'
     CACHE_DEFAULT_TIMEOUT = 300
 
-    # OpenAI
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-    OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4-turbo')
-    FALLBACK_MODEL = os.getenv('FALLBACK_MODEL', 'gpt-4')
+    # Anthropic
+    ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
+    CLAUDE_MODEL = os.getenv('CLAUDE_MODEL', 'claude-sonnet-4-20250514')
 
     # Mail
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')

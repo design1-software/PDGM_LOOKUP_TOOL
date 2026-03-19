@@ -21,9 +21,23 @@ def api_lookup():
         body = request.get_json(silent=True) or {}
         v = validate_lookup_request(body)
         query = v['query']
+        zip_code = v.get('zip_code', '')
+        visit_count = v.get('visit_count')
 
         from services.pdgm.rules_engine import lookup_pdgm
         payload = lookup_pdgm(query)
+
+        # Append payment estimate if zip_code or visit_count provided
+        if zip_code or visit_count is not None:
+            from services.reimbursement_service import ReimbursementService, extract_pdgm_code_from_response
+            pdgm_code = (payload.get('raw') or {}).get('pdgm_clinical_group_code', '')
+            if not pdgm_code:
+                pdgm_code = (payload.get('raw') or {}).get('pdgm_clinical_group_name', '')
+            if pdgm_code:
+                service = ReimbursementService()
+                payment = service.calculate_payment(pdgm_code, zip_code, visit_count)
+                payload['payment'] = payment
+
         return jsonify(payload)
     except ValidationError as ve:
         return jsonify({'error': str(ve)}), 400

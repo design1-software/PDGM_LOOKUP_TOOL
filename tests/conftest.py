@@ -6,41 +6,47 @@ import pytest
 # Set testing env before any app imports
 os.environ['TESTING'] = '1'
 os.environ['FLASK_ENV'] = 'testing'
-os.environ.setdefault('OPENAI_API_KEY', 'test-key')
+os.environ.setdefault('ANTHROPIC_API_KEY', 'test-key')
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _stub_external_modules():
-    """Stub openai to avoid real API calls in tests."""
-    if "openai" not in sys.modules:
-        openai_stub = types.ModuleType("openai")
+    """Stub anthropic to avoid real API calls in tests."""
+    if "anthropic" not in sys.modules:
+        anthropic_stub = types.ModuleType("anthropic")
 
-        class _DummyOpenAI:
+        _DUMMY_RESPONSE_TEXT = (
+            "Focus of Care: I10 Essential hypertension A MMTA_OTHER  ICD-10: I10\n"
+            "Description: Essential hypertension\n"
+            "PDGM Group: MMTA - Other\n"
+            "Comorbidity Group: No_group\n"
+            "Primary Awarding: 1\n"
+            "Code First: 0\n"
+            "Billable: Yes\n"
+            "Reason: Test"
+        )
+
+        class _ContentBlock:
+            def __init__(self):
+                self.text = _DUMMY_RESPONSE_TEXT
+
+        class _DummyMessages:
+            def create(self, *args, **kwargs):
+                class _Resp:
+                    content = [_ContentBlock()]
+                return _Resp()
+
+        class _DummyAnthropic:
             def __init__(self, *args, **kwargs):
-                pass
-
-            class chat:
-                class completions:
-                    @staticmethod
-                    def create(*args, **kwargs):
-                        class _Resp:
-                            class _Choice:
-                                class _Msg:
-                                    content = "Focus of Care: I10 Essential hypertension A MMTA_OTHER  ICD-10: I10\nDescription: Essential hypertension\nPDGM Group: MMTA - Other\nComorbidity Group: No_group\nPrimary Awarding: 1\nCode First: 0\nBillable: Yes\nReason: Test"
-
-                                message = _Msg()
-
-                            choices = [_Choice()]
-
-                        return _Resp()
+                self.messages = _DummyMessages()
 
         class _DummyError(Exception):
             pass
 
-        openai_stub.OpenAI = _DummyOpenAI
-        openai_stub.RateLimitError = _DummyError
-        openai_stub.OpenAIError = _DummyError
-        sys.modules["openai"] = openai_stub
+        anthropic_stub.Anthropic = _DummyAnthropic
+        anthropic_stub.RateLimitError = _DummyError
+        anthropic_stub.APIError = _DummyError
+        sys.modules["anthropic"] = anthropic_stub
 
     yield
 
