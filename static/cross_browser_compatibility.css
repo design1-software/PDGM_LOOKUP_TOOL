@@ -75,7 +75,7 @@ button {
 }
 
 /* Fix for Edge input styling */
-input,
+input:not([type="radio"]):not([type="checkbox"]),
 textarea,
 select {
     -webkit-appearance: none;
@@ -92,7 +92,7 @@ select {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-input:focus,
+input:not([type="radio"]):not([type="checkbox"]):focus,
 textarea:focus,
 select:focus {
     border-color: #3b82f6;
