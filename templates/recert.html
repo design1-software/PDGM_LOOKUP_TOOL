@@ -42,7 +42,7 @@
         .page-title {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #082F49;
+            color: #1E293B;
             margin-bottom: 1rem;
         }
 
@@ -55,18 +55,18 @@
         }
 
         .calculator-section {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
             border-radius: 1.5rem;
             padding: 2.5rem;
             margin-bottom: 2rem;
-            border: 1px solid #bbf7d0;
+            border: 1px solid #BAE6FD;
         }
 
         .calculator-icon {
             width: 64px;
             height: 64px;
             margin: 0 auto 1.5rem;
-            color: #10b981;
+            color: #0EA5E9;
             display: block;
         }
 
@@ -79,7 +79,7 @@
 
         .calculate-button {
             width: 100%;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
             color: white;
             border: none;
             padding: 1rem 2rem;
@@ -92,12 +92,12 @@
 
         .calculate-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.3);
         }
 
         .recert-results {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 2px solid #10b981;
+            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+            border: 2px solid #0EA5E9;
             border-radius: 1.5rem;
             padding: 2rem;
             margin-bottom: 2rem;
@@ -108,25 +108,25 @@
             width: 48px;
             height: 48px;
             margin: 0 auto 1rem;
-            color: #10b981;
+            color: #0EA5E9;
         }
 
         .recert-results-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #082F49;
+            color: #1E293B;
             margin-bottom: 0.5rem;
         }
 
         .recert-results-date {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #10b981;
+            color: #0EA5E9;
             margin-bottom: 1rem;
         }
 
         .recert-results-warning {
-            color: #082F49;
+            color: #1E293B;
             font-weight: 500;
             margin-bottom: 1.5rem;
         }
@@ -139,7 +139,7 @@
         }
 
         .action-button {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
             color: white;
             padding: 0.75rem 1.5rem;
             border-radius: 1.5rem;
@@ -152,11 +152,11 @@
 
         .action-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
         }
 
         .action-button.download {
-            background: linear-gradient(135deg, #082F49 0%, #0b3a53 100%);
+            background: linear-gradient(135deg, #1E293B 0%, #0b3a53 100%);
         }
 
         .action-button.download:hover {
@@ -179,9 +179,9 @@
         }
 
         .email-input:focus {
-            border-color: #10b981;
+            border-color: #0EA5E9;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
         }
 
         .info-cards {
@@ -208,13 +208,13 @@
             width: 48px;
             height: 48px;
             margin-bottom: 1rem;
-            color: #10b981;
+            color: #0EA5E9;
         }
 
         .info-card-title {
             font-size: 1.125rem;
             font-weight: 600;
-            color: #082F49;
+            color: #1E293B;
             margin-bottom: 0.5rem;
         }
 
@@ -225,18 +225,18 @@
         }
 
         .cta-section {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
             border-radius: 1.5rem;
             padding: 2rem;
             text-align: center;
             margin-bottom: 2rem;
-            border: 1px solid #bbf7d0;
+            border: 1px solid #BAE6FD;
         }
 
         .cta-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #082F49;
+            color: #1E293B;
             margin-bottom: 0.5rem;
         }
 
@@ -246,7 +246,7 @@
         }
 
         .cta-button {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
             color: white;
             padding: 1rem 2rem;
             border-radius: 1.5rem;
@@ -258,7 +258,7 @@
 
         .cta-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.3);
         }
 
         .recert-footer {
@@ -342,7 +342,7 @@
                 <div class="recert-results-date">{{ due }}</div>
 
                 {% if days_remaining is not none %}
-                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: {% if days_remaining <= 7 %}#dc2626{% elif days_remaining <= 14 %}#f59e0b{% else %}#10b981{% endif %};">
+                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: {% if days_remaining <= 7 %}#dc2626{% elif days_remaining <= 14 %}#f59e0b{% else %}#0EA5E9{% endif %};">
                     {{ days_remaining }} days remaining
                 </p>
                 {% endif %}
