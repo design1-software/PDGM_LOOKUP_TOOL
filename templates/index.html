@@ -75,6 +75,10 @@
                     <span class="user-name">{{ lead_email }}</span>
                 </div>
                 {% endif %}
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                    <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
             </div>
         </header>
 
@@ -163,8 +167,11 @@
                                 d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                         <input type="text" id="diagnosis-input" name="diagnosis" class="form-input"
-                            style="padding-left: 2.5rem;" placeholder="e.g. CHF exacerbation with skilled SN or E11.65"
+                            style="padding-left: 2.5rem; padding-right: 2.5rem;" placeholder="e.g. CHF exacerbation with skilled SN or E11.65"
                             required>
+                        <button type="button" id="voice-btn" class="voice-btn" aria-label="Voice input">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        </button>
                         <div id="suggestions" class="autocomplete-list" style="display:none;"></div>
                     </div>
                 </div>
@@ -193,6 +200,9 @@
                     ASK ME
                 </button>
             </form>
+
+            <!-- Recent Searches -->
+            <div id="recent-searches" class="recent-searches-section" style="display:none;"></div>
 
             <!-- Results Section -->
             <div id="results" class="results-section" {% if result %}style="display:block;" {% else
@@ -317,9 +327,24 @@
                         </div>
                     </div>
 
+                    <!-- HIPPS Progress Indicator -->
+                    <div class="hipps-progress">
+                        <div class="hipps-progress-track"><div id="hipps-progress-fill" class="hipps-progress-fill"></div></div>
+                        <span id="hipps-progress-text" class="hipps-progress-text">0/4 sections</span>
+                    </div>
+
                     <button type="button" id="btn-calc-hipps" class="btn-hipps" onclick="calculateHIPPS()">
                         Calculate HIPPS Code
                     </button>
+
+                    <!-- Impact Meter -->
+                    <div id="impact-meter" class="impact-meter" style="display:none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.8rem; color:var(--text-muted);">Payment Impact</span>
+                            <span id="impact-delta" class="impact-delta"></span>
+                        </div>
+                        <div class="impact-bar"><div id="impact-fill" class="impact-fill" style="width:50%;"></div></div>
+                    </div>
 
                     <div id="hipps-result" class="hipps-result" style="display:none;"></div>
                 </div>
@@ -329,6 +354,8 @@
                     <div class="export-buttons"
                         style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
                         <button onclick="copyToClipboard()" class="btn-export">Copy to Clipboard</button>
+                        <button onclick="exportPDGMSummary()" class="btn-export">Export Summary</button>
+                        <button onclick="openComparisonMode()" class="compare-btn">Compare Diagnoses</button>
                     </div>
                 </div>
             </div>
@@ -374,6 +401,27 @@
                 <button onclick="copyAssessment()" class="btn-export">Copy</button>
                 <button onclick="printAssessment()" class="btn-export">Print</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Comparison Modal -->
+    <div id="comparison-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:800px;">
+            <span class="close" onclick="closeComparisonModal()">&times;</span>
+            <h3 style="margin-bottom:1rem; color:var(--text-primary);">Compare Diagnoses</h3>
+            <div style="display:flex; gap:1rem; align-items:flex-end; margin-bottom:1rem; flex-wrap:wrap;">
+                <div style="flex:1; min-width:200px;">
+                    <label style="font-size:0.85rem; color:var(--text-muted);">Current Diagnosis</label>
+                    <div id="compare-code-a" style="font-weight:700; font-size:1.1rem; color:var(--accent);"></div>
+                    <div id="compare-desc-a" style="font-size:0.85rem; color:var(--text-secondary);"></div>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    <label style="font-size:0.85rem; color:var(--text-muted);">Compare With</label>
+                    <input type="text" id="compare-input-b" placeholder="Enter ICD-10 code" style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-primary);">
+                </div>
+                <button id="compare-go-btn" onclick="runComparison()" class="btn-hipps" style="padding:0.5rem 1.5rem; width:auto; margin:0;">Compare</button>
+            </div>
+            <div id="compare-result"></div>
         </div>
     </div>
 
@@ -575,7 +623,26 @@
                 `;
             }
 
+            // Red flag alerts
+            if (data.flags && data.flags.length > 0) {
+                html += '<div class="red-flags">';
+                data.flags.forEach(function(f) {
+                    var icon = f.type === 'error' ? '&#x26D4;' : f.type === 'warning' ? '&#x26A0;' : '&#x2139;';
+                    html += '<div class="flag-badge flag-' + f.type + '">' + icon + ' ' + f.message + '</div>';
+                });
+                html += '</div>';
+            }
+
+            // Supply crosswalk
+            if (window.getSupplyCrosswalk) {
+                var crosswalk = window.getSupplyCrosswalk(icd10);
+                if (crosswalk) html += window.renderSupplyCrosswalk(crosswalk);
+            }
+
             responseContent.innerHTML = html;
+
+            // Save to recent searches
+            if (window.recentSearches) window.recentSearches.add(window.currentQuery || icd10, icd10);
         }
 
         // Authentication Modal Functions
@@ -833,33 +900,131 @@
 
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(function (registration) {
-                        console.log('ServiceWorker registration successful');
-                        if (registration.active) {
-                            const channel = new MessageChannel();
-                            channel.port1.onmessage = event => {
-                                console.log('ServiceWorker message:', event.data);
-                            };
-                            registration.active.postMessage({ type: 'SKIP_WAITING' }, [channel.port2]);
-                        }
-                    })
-                    .catch(function (err) {
-                        console.log('ServiceWorker registration failed');
-                    });
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(function () { console.log('SW registered'); })
+                .catch(function () { console.log('SW failed'); });
+        }
+
+        // ---- DARK MODE ----
+        (function() {
+            const saved = localStorage.getItem('pdgm-theme');
+            if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+            document.addEventListener('DOMContentLoaded', function() {
+                const toggle = document.getElementById('theme-toggle');
+                const sunIcon = document.getElementById('theme-icon-sun');
+                const moonIcon = document.getElementById('theme-icon-moon');
+                function updateIcons() {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    sunIcon.style.display = isDark ? 'none' : 'block';
+                    moonIcon.style.display = isDark ? 'block' : 'none';
+                }
+                updateIcons();
+                toggle.addEventListener('click', function() {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+                    localStorage.setItem('pdgm-theme', isDark ? '' : 'dark');
+                    updateIcons();
+                });
             });
+        })();
+
+        // ---- STICKY HEADER SCROLL EFFECT ----
+        window.addEventListener('scroll', function() {
+            document.querySelector('.header').classList.toggle('scrolled', window.scrollY > 10);
+        });
+
+        // ---- VOICE INPUT ----
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceBtn = document.getElementById('voice-btn');
+            const diagInput = document.getElementById('diagnosis-input');
+            if (!voiceBtn || !diagInput) return;
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SR();
+                recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+                let listening = false;
+                voiceBtn.addEventListener('click', function() {
+                    if (listening) { recognition.stop(); return; }
+                    recognition.start(); listening = true; voiceBtn.classList.add('listening');
+                });
+                recognition.onresult = function(e) {
+                    diagInput.value = e.results[0][0].transcript;
+                    diagInput.dispatchEvent(new Event('input'));
+                };
+                recognition.onend = function() { listening = false; voiceBtn.classList.remove('listening'); };
+                recognition.onerror = function() { listening = false; voiceBtn.classList.remove('listening'); };
+            } else {
+                voiceBtn.style.display = 'none';
+            }
+        });
+
+        // ---- RECENT SEARCHES ----
+        (function() {
+            const KEY = 'pdgm-recent-searches';
+            const MAX = 10;
+            window.recentSearches = {
+                getAll: function() { return JSON.parse(localStorage.getItem(KEY) || '[]'); },
+                add: function(query, icd10) {
+                    let items = this.getAll().filter(function(i) { return i.query !== query; });
+                    items.unshift({ query: query, icd10: icd10 || query, timestamp: Date.now() });
+                    if (items.length > MAX) items = items.slice(0, MAX);
+                    localStorage.setItem(KEY, JSON.stringify(items));
+                    this.render();
+                },
+                render: function() {
+                    const el = document.getElementById('recent-searches');
+                    if (!el) return;
+                    const items = this.getAll();
+                    if (!items.length) { el.style.display = 'none'; return; }
+                    el.style.display = 'block';
+                    el.innerHTML = '<h4>Recent Searches</h4><div class="recent-tags">' +
+                        items.map(function(i) { return '<button class="recent-tag" onclick="document.getElementById(\'diagnosis-input\').value=\'' + i.query + '\'; document.getElementById(\'pdgm-form\').dispatchEvent(new Event(\'submit\'));">' + (i.icd10 || i.query) + '</button>'; }).join('') +
+                        '</div>';
+                }
+            };
+            document.addEventListener('DOMContentLoaded', function() { window.recentSearches.render(); });
+        })();
+
+        // ---- EXPORT PDF SUMMARY ----
+        function exportPDGMSummary() {
+            if (!window.currentResults) return;
+            const d = window.currentResults;
+            const icd10 = d.icd10 || '';
+            const desc = d.raw?.description || '';
+            const group = d.raw?.pdgm_clinical_group_name || '';
+            const hippsEl = document.getElementById('hipps-result');
+            const hippsHTML = hippsEl && hippsEl.style.display !== 'none' ? hippsEl.innerHTML : '';
+            const pay = d.payment;
+            const w = window.open('', '', 'width=800,height=600');
+            w.document.write('<!DOCTYPE html><html><head><title>PDGM Summary - ' + icd10 + '</title>' +
+                '<style>body{font-family:Roboto,Arial,sans-serif;max-width:700px;margin:2rem auto;padding:0 1rem;color:#1E293B;}' +
+                'h1{color:#1E293B;border-bottom:3px solid #0EA5E9;padding-bottom:0.5rem;}' +
+                'table{width:100%;border-collapse:collapse;margin:1rem 0;}th,td{padding:0.5rem;text-align:left;border-bottom:1px solid #e2e8f0;}' +
+                'th{background:#f8fafc;font-weight:600;width:40%;}.footer{text-align:center;color:#94a3b8;font-size:0.8rem;margin-top:2rem;border-top:1px solid #e2e8f0;padding-top:1rem;}' +
+                '@media print{body{margin:0;}}</style></head><body>' +
+                '<h1>PDGM Analysis Summary</h1><p style="color:#64748b;">Generated: ' + new Date().toLocaleDateString() + '</p>' +
+                '<table><tr><th>ICD-10 Code</th><td><strong>' + icd10 + '</strong></td></tr>' +
+                '<tr><th>Description</th><td>' + desc + '</td></tr>' +
+                '<tr><th>Clinical Group</th><td>' + group + '</td></tr></table>' +
+                (pay && pay.estimated_payment ? '<h2>Payment Estimate</h2><table>' +
+                '<tr><th>Payment Amount</th><td><strong>$' + pay.estimated_payment.toLocaleString('en-US',{minimumFractionDigits:2}) + '</strong></td></tr>' +
+                '<tr><th>Base Rate</th><td>$' + pay.base_rate.toLocaleString('en-US',{minimumFractionDigits:2}) + '</td></tr>' +
+                '<tr><th>Wage Index</th><td>' + pay.wage_index.toFixed(3) + '</td></tr></table>' : '') +
+                (hippsHTML ? '<h2>HIPPS Code Analysis</h2>' + hippsHTML : '') +
+                '<div class="footer"><p>PDGM Lookup Tool — For informational purposes only.</p></div></body></html>');
+            w.document.close(); w.focus(); w.print();
         }
     </script>
 
-    <!-- Auth state verification JS removed -->
     <!-- Enhanced Loading Indicators -->
     <script src="/static/universal_navigation.js?v=4"></script>
-    <script src="/static/enhanced_query_progress.js?v=5"></script>
+    <script src="/static/enhanced_query_progress.js?v=6"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
-    <script src="/static/hipps_calculator.js?v=1"></script>
-    <script src="/static/animations.js?v=1"></script>
+    <script src="/static/hipps_calculator.js?v=2"></script>
+    <script src="/static/supply_crosswalk.js?v=1"></script>
+    <script src="/static/comparison_mode.js?v=1"></script>
+    <script src="/static/animations.js?v=2"></script>
     <script src="{{ url_for('static', filename='fixed_interactive_followup.js') }}"></script>
 </body>
 

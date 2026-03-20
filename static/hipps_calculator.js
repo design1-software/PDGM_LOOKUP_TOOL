@@ -37,6 +37,70 @@
         container.innerHTML = secondaryDxList.map((code, i) =>
             `<span class="secondary-dx-tag">${code}<button onclick="removeSecondaryDx(${i})">&times;</button></span>`
         ).join('');
+        checkComorbidityLive();
+        updateHIPPSProgress();
+    }
+
+    // --- Dynamic Comorbidity Checker ---
+    async function checkComorbidityLive() {
+        if (!window.currentResults?.icd10 || secondaryDxList.length === 0) {
+            renderComorbidityBadge('None');
+            return;
+        }
+        try {
+            const resp = await fetch('/api/comorbidity-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    primary_icd10: window.currentResults.icd10,
+                    secondary_icd10s: secondaryDxList
+                })
+            });
+            const data = await resp.json();
+            renderComorbidityBadge(data.adjustment);
+        } catch (e) {
+            renderComorbidityBadge('None');
+        }
+    }
+
+    function renderComorbidityBadge(level) {
+        let badge = document.getElementById('comorbidity-badge');
+        if (!badge) {
+            const label = document.querySelector('.hipps-field label');
+            if (!label) return;
+            // Find the "Secondary Diagnoses" label
+            const labels = document.querySelectorAll('.hipps-field label');
+            for (const l of labels) {
+                if (l.textContent.includes('Secondary')) {
+                    badge = document.createElement('span');
+                    badge.id = 'comorbidity-badge';
+                    badge.className = 'comorbidity-badge';
+                    l.appendChild(badge);
+                    break;
+                }
+            }
+            if (!badge) return;
+        }
+        const cls = level === 'High' ? 'adj-high' : level === 'Low' ? 'adj-low' : 'adj-none';
+        badge.className = 'comorbidity-badge ' + cls + ' just-changed';
+        badge.textContent = level === 'None' ? 'No Adjustment' : level + ' Comorbidity';
+        setTimeout(() => badge.classList.remove('just-changed'), 500);
+    }
+
+    // --- HIPPS Progress Indicator ---
+    function updateHIPPSProgress() {
+        const fill = document.getElementById('hipps-progress-fill');
+        const text = document.getElementById('hipps-progress-text');
+        if (!fill || !text) return;
+        let completed = 0;
+        const total = 4;
+        if (window.currentResults?.icd10) completed++;
+        if (document.querySelector('input[name="admission_source"]:checked')) completed++;
+        if (document.querySelector('input[name="episode_timing"]:checked')) completed++;
+        const ggFilled = document.querySelectorAll('[data-gg]:not([value=""])').length;
+        if (ggFilled > 0) completed++;
+        fill.style.width = ((completed / total) * 100) + '%';
+        text.textContent = completed + '/' + total + ' sections';
     }
 
     // --- GG Scores Toggle ---
@@ -48,6 +112,17 @@
         document.getElementById('gg-toggle-btn').textContent =
             ggScoresVisible ? 'Hide Functional Scores (GG Items)' : 'Enter Functional Scores (GG Items) — optional';
     };
+
+    // --- Event listeners for progress + impact updates ---
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('input[name="admission_source"], input[name="episode_timing"]').forEach(function (el) {
+            el.addEventListener('change', function () { updateHIPPSProgress(); });
+        });
+        document.querySelectorAll('[data-gg]').forEach(function (el) {
+            el.addEventListener('change', function () { updateHIPPSProgress(); });
+        });
+        updateHIPPSProgress();
+    });
 
     // --- Collect GG Scores ---
 

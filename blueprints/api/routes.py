@@ -30,6 +30,27 @@ def api_lookup():
         from services.pdgm.rules_engine import lookup_pdgm
         payload = lookup_pdgm(query)
 
+        # Red flag alerts from CSV data
+        raw = payload.get('raw') or {}
+        flags = []
+        if raw.get('UNACCEPTABLE_PDX') == '1':
+            flags.append({'type': 'error', 'code': 'UNACCEPTABLE_PDX',
+                          'message': 'Unacceptable principal diagnosis — cannot be used as primary Dx'})
+        if raw.get('UNSPECIFIED_PDX') == '1':
+            flags.append({'type': 'warning', 'code': 'UNSPECIFIED_PDX',
+                          'message': 'Unspecified diagnosis — use a more specific code when possible'})
+        if raw.get('MANIFESTATION_FLAG') == '1':
+            flags.append({'type': 'warning', 'code': 'MANIFESTATION',
+                          'message': 'Manifestation code — must be sequenced after the underlying condition'})
+        if raw.get('ECOI_FLAG') == '1':
+            flags.append({'type': 'warning', 'code': 'ECOI',
+                          'message': 'External cause code — cannot be used as principal diagnosis'})
+        if raw.get('PRIMARY_AWARDING_FLAG') == '0' and raw.get('pdgm_clinical_group_code'):
+            flags.append({'type': 'info', 'code': 'NO_PRIMARY_AWARD',
+                          'message': 'This code does not qualify for primary awarding'})
+        if flags:
+            payload['flags'] = flags
+
         # Append payment estimate if zip_code or visit_count provided
         if zip_code or visit_count is not None:
             from services.reimbursement_service import ReimbursementService, extract_pdgm_code_from_response
@@ -157,6 +178,77 @@ def api_hipps():
     except Exception as e:
         current_app.logger.error(f'/api/hipps error: {e}')
         return jsonify({'error': 'HIPPS calculation failed'}), 500
+
+
+@bp.get('/api/case-mix-weights')
+def api_case_mix_weights():
+    """Expose all HIPPS case-mix weights for client-side impact calculations."""
+    from services.pdgm.hipps import CASE_MIX_WEIGHTS, NATIONAL_30DAY_RATE
+    return jsonify(weights=CASE_MIX_WEIGHTS, national_rate=NATIONAL_30DAY_RATE)
+
+
+@bp.post('/api/comorbidity-check')
+def api_comorbidity_check():
+    """Live comorbidity adjustment check without full HIPPS calculation."""
+    try:
+        body = request.get_json(silent=True) or {}
+        primary_code = body.get('primary_icd10', '')
+        secondary_codes = body.get('secondary_icd10s', [])
+        from app import normalize_icd10, icd10_data
+        from services.pdgm.comorbidity import determine_comorbidity_adjustment
+        primary_row = icd10_data.get(normalize_icd10(primary_code), {})
+        primary_sg = primary_row.get('COMORBIDITY_GROUP', 'No_group')
+        secondary_sgs = []
+        for c in secondary_codes:
+            row = icd10_data.get(normalize_icd10(c), {})
+            secondary_sgs.append(row.get('COMORBIDITY_GROUP', 'No_group'))
+        adj = determine_comorbidity_adjustment(primary_sg, secondary_sgs)
+        return jsonify(adjustment=adj, primary_subgroup=primary_sg, secondary_subgroups=secondary_sgs)
+    except Exception as e:
+        return jsonify(adjustment='None', error=str(e))
+
+
+@bp.post('/api/compare')
+def api_compare():
+    """Side-by-side diagnosis comparison."""
+    try:
+        body = request.get_json(silent=True) or {}
+        code_a = body.get('code_a', '')
+        code_b = body.get('code_b', '')
+        from app import normalize_icd10, icd10_data
+        from services.pdgm.hipps import CASE_MIX_WEIGHTS, NATIONAL_30DAY_RATE
+
+        def build_info(code_str):
+            from services.pdgm.rules_engine import explain_pdgm_for_icd10
+            info = explain_pdgm_for_icd10(normalize_icd10(code_str))
+            raw = info.get('raw') or {}
+            cg = raw.get('pdgm_clinical_group_code', '')
+            weights = [CASE_MIX_WEIGHTS[k] for k in CASE_MIX_WEIGHTS if k.startswith(cg)] if cg else []
+            info['payment_range'] = {
+                'min': round(min(weights) * NATIONAL_30DAY_RATE, 2),
+                'max': round(max(weights) * NATIONAL_30DAY_RATE, 2),
+            } if weights else None
+            return info
+
+        return jsonify(a=build_info(code_a), b=build_info(code_b))
+    except Exception as e:
+        current_app.logger.error(f'/api/compare error: {e}')
+        return jsonify({'error': 'comparison failed'}), 500
+
+
+@bp.get('/api/offline-data')
+def api_offline_data():
+    """Compact ICD-10 map for offline PWA lookups."""
+    from app import icd10_data
+    compact = {}
+    for code, row in icd10_data.items():
+        compact[code] = {
+            'd': row.get('description', ''),
+            'g': row.get('pdgm_clinical_group_code', ''),
+            'gn': row.get('pdgm_clinical_group_name', ''),
+            'cg': row.get('COMORBIDITY_GROUP', ''),
+        }
+    return jsonify(data=compact)
 
 
 @bp.get('/api/suggest')
