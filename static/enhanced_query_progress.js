@@ -255,9 +255,11 @@ class PDGMQueryProgress {
                 this.displayResults(result);
             }
 
-            // Show documentation roadmap & export buttons
+            // Show documentation roadmap, HIPPS calculator & export buttons
             const roadmapContainer = document.getElementById('roadmap-container');
             if (roadmapContainer) roadmapContainer.style.display = 'block';
+            const hippsPanel = document.getElementById('hipps-panel');
+            if (hippsPanel) hippsPanel.style.display = 'block';
             const exportSection = document.getElementById('export-section');
             if (exportSection) exportSection.style.display = 'block';
         }, 1000);

@@ -61,3 +61,43 @@ def validate_assessment_request(payload: dict) -> dict:
     diagnosis = _ensure_str(payload.get("diagnosis",""), "diagnosis")
     pdgm_group = _ensure_str(payload.get("pdgm_group",""), "pdgm_group")
     return {"diagnosis": diagnosis, "pdgm_group": pdgm_group}
+
+def validate_hipps_request(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValidationError("Body must be a JSON object")
+    primary_icd10 = _ensure_str(payload.get("primary_icd10", ""), "primary_icd10")
+    secondary_icd10s = _ensure_list_str(payload.get("secondary_icd10s"), "secondary_icd10s")
+    admission_source = payload.get("admission_source", 1)
+    try:
+        admission_source = int(admission_source)
+    except (ValueError, TypeError):
+        admission_source = 1
+    if admission_source not in (1, 2):
+        admission_source = 1
+    episode_timing = payload.get("episode_timing", 1)
+    try:
+        episode_timing = int(episode_timing)
+    except (ValueError, TypeError):
+        episode_timing = 1
+    if episode_timing not in (1, 2):
+        episode_timing = 1
+    gg0130 = payload.get("gg0130", {})
+    gg0170 = payload.get("gg0170", {})
+    if not isinstance(gg0130, dict):
+        gg0130 = {}
+    if not isinstance(gg0170, dict):
+        gg0170 = {}
+    zip_code = payload.get("zip_code", "")
+    if isinstance(zip_code, str):
+        zip_code = zip_code.strip()
+    else:
+        zip_code = ""
+    return {
+        "primary_icd10": primary_icd10,
+        "secondary_icd10s": secondary_icd10s,
+        "admission_source": admission_source,
+        "episode_timing": episode_timing,
+        "gg0130": gg0130,
+        "gg0170": gg0170,
+        "zip_code": zip_code,
+    }
