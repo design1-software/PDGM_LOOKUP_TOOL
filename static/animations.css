@@ -1,0 +1,341 @@
+/* ============================================================
+   PDGM Lookup Tool — Animation System
+   Modern Neumorphic micro-interactions & transitions
+   ============================================================ */
+
+/* ---------- 1. HERO ENTRANCE ANIMATIONS ---------- */
+
+@keyframes logoEntrance {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.header-logo {
+    animation: logoEntrance 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.main-title {
+    animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.lookup-form {
+    animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+}
+
+/* ---------- 2. INPUT FOCUS GLOW PULSE ---------- */
+
+@keyframes focusGlow {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
+    50%      { box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.08); }
+}
+
+.form-input:focus,
+.zip-input:focus,
+.visit-input:focus {
+    animation: focusGlow 2s ease-in-out infinite;
+}
+
+/* ---------- 3. SUBMIT BUTTON IDLE PULSE ---------- */
+
+@keyframes idlePulse {
+    0%, 100% { box-shadow: 0 4px 14px -3px rgba(14, 165, 233, 0.25); }
+    50%      { box-shadow: 0 4px 20px -3px rgba(14, 165, 233, 0.45); }
+}
+
+.btn-submit {
+    animation: idlePulse 3s ease-in-out infinite;
+}
+
+.btn-submit:hover {
+    animation: none;
+}
+
+/* ---------- 4. AUTOCOMPLETE DROPDOWN ---------- */
+
+@keyframes dropdownSlide {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.autocomplete-list[style*="display: block"],
+.autocomplete-list[style*="display:block"] {
+    animation: dropdownSlide 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.autocomplete-item {
+    transition: background-color 0.15s ease, padding-left 0.15s ease;
+}
+
+.autocomplete-item:hover {
+    padding-left: 1rem;
+    background: #F0F9FF;
+}
+
+/* ---------- 5. RESULTS CARD ENTRANCE ---------- */
+
+@keyframes resultCardEntrance {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.consolidated-results-card {
+    animation: resultCardEntrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger detail rows */
+@keyframes rowFadeIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.detail-row {
+    animation: rowFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-row:nth-child(1) { animation-delay: 0.05s; }
+.detail-row:nth-child(2) { animation-delay: 0.10s; }
+.detail-row:nth-child(3) { animation-delay: 0.15s; }
+.detail-row:nth-child(4) { animation-delay: 0.20s; }
+.detail-row:nth-child(5) { animation-delay: 0.25s; }
+.detail-row:nth-child(6) { animation-delay: 0.30s; }
+
+/* ---------- 6. PAYMENT CARD ---------- */
+
+.highlight-value {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.highlight-value:hover {
+    transform: scale(1.05);
+}
+
+/* ---------- 7. LUPA SHAKE ---------- */
+
+@keyframes lupaShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+.lupa-alert,
+[style*="color: #ef4444"][style*="font-weight: bold"] {
+    animation: lupaShake 0.6s ease-in-out 0.3s both;
+}
+
+/* ---------- 8. HIPPS PANEL ACCORDION ---------- */
+
+.hipps-panel {
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.3s ease;
+}
+
+.hipps-panel[style*="display: block"],
+.hipps-panel[style*="display:block"] {
+    animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- 9. HIPPS CODE FLIP-IN ---------- */
+
+@keyframes charFlipIn {
+    0%   { opacity: 0; transform: rotateX(-90deg); }
+    60%  { transform: rotateX(10deg); }
+    100% { opacity: 1; transform: rotateX(0); }
+}
+
+.hipps-code-char {
+    display: inline-block;
+    animation: charFlipIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    perspective: 600px;
+}
+
+.hipps-code-char:nth-child(1) { animation-delay: 0.0s; }
+.hipps-code-char:nth-child(2) { animation-delay: 0.08s; }
+.hipps-code-char:nth-child(3) { animation-delay: 0.16s; }
+.hipps-code-char:nth-child(4) { animation-delay: 0.24s; }
+.hipps-code-char:nth-child(5) { animation-delay: 0.32s; }
+
+/* ---------- 10. HIPPS BREAKDOWN ROWS ---------- */
+
+.hipps-breakdown .item {
+    animation: rowFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hipps-breakdown .item:nth-child(1) { animation-delay: 0.45s; }
+.hipps-breakdown .item:nth-child(2) { animation-delay: 0.50s; }
+.hipps-breakdown .item:nth-child(3) { animation-delay: 0.55s; }
+.hipps-breakdown .item:nth-child(4) { animation-delay: 0.60s; }
+.hipps-breakdown .item:nth-child(5) { animation-delay: 0.65s; }
+.hipps-breakdown .item:nth-child(6) { animation-delay: 0.70s; }
+
+/* ---------- 11. CARD HOVER PARALLAX TILT ---------- */
+
+.consolidated-results-card,
+.hipps-result,
+.info-card,
+.feature-card {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.3s ease;
+}
+
+.consolidated-results-card:hover,
+.hipps-result:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* ---------- 12. BUTTON SCALE + LIFT ---------- */
+
+.btn-submit,
+.btn-export,
+.btn-hipps,
+.action-button,
+.calculate-button,
+.cta-button {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.2s ease;
+}
+
+.btn-export:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+/* ---------- 13. COPY BUTTON CHECKMARK ---------- */
+
+@keyframes checkPop {
+    0%   { transform: scale(0); opacity: 0; }
+    50%  { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.btn-export.copied {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
+    border-color: #10b981 !important;
+    pointer-events: none;
+}
+
+.btn-export.copied::after {
+    content: ' ✓';
+    animation: checkPop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- 14. MODAL TRANSITIONS ---------- */
+
+.modal {
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+
+.modal.modal-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal .modal-content {
+    transform: scale(0.92) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal.modal-visible .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+/* ---------- 15. SKELETON LOADING ---------- */
+
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 0.5rem;
+}
+
+.skeleton-card {
+    padding: 2rem;
+    background: white;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.skeleton-line {
+    height: 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 65%; }
+.skeleton-line.long { width: 90%; }
+.skeleton-line.full { width: 100%; }
+
+.skeleton-title {
+    height: 1.5rem;
+    width: 50%;
+    margin-bottom: 1.5rem;
+    border-radius: 0.25rem;
+}
+
+/* ---------- 16. ROADMAP / EXPORT SECTION ENTRANCE ---------- */
+
+.roadmap-container,
+.export-section {
+    animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+/* ---------- 17. COUNTER ANIMATION HELPER ---------- */
+
+.counter-animate {
+    display: inline-block;
+    transition: all 0.1s ease;
+}
+
+/* ---------- 18. PROGRESS CHECKMARK DRAW ---------- */
+
+@keyframes checkDraw {
+    from { stroke-dashoffset: 24; }
+    to   { stroke-dashoffset: 0; }
+}
+
+.stage-checkmark svg {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+}
+
+.progress-stage.completed .stage-checkmark svg {
+    animation: checkDraw 0.3s ease-out forwards;
+}
+
+/* ---------- 19. GG SCORES SECTION ---------- */
+
+#gg-scores-section {
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+}
+
+/* ---------- REDUCED MOTION ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
