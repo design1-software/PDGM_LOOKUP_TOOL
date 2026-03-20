@@ -392,8 +392,7 @@
                 clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(async () => {
                     const val = diagnosisInput.value.trim();
-                    const pattern = /^[A-Za-z][0-9A-Za-z]{0,6}(?:\.[0-9A-Za-z]{0,4})?$/;
-                    if (!val || !pattern.test(val)) {
+                    if (!val || val.length < 2) {
                         suggestionsBox.style.display = 'none';
                         return;
                     }
@@ -405,8 +404,9 @@
                         }
                         if (!resp.ok) return;
                         const data = await resp.json();
-                        if (data.results.length) {
-                            suggestionsBox.innerHTML = data.results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
+                        const results = data.suggestions || data.results || [];
+                        if (results.length) {
+                            suggestionsBox.innerHTML = results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
                         } else {
                             suggestionsBox.innerHTML = '<div class="autocomplete-item">No match</div>';
                         }
