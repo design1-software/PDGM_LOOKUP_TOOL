@@ -456,15 +456,28 @@ h1, h2, h3, .main-title, .results-title, .page-title,
     font-family: var(--font-mono) !important;
 }
 
+.hipps-breakdown {
+    grid-template-columns: 1fr !important;
+}
+
 .hipps-breakdown .item {
-    border-bottom: 1px solid var(--border-light) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 0.5rem 0 !important;
 }
 
 .hipps-breakdown .item-label {
     color: var(--text-muted) !important;
     font-family: var(--font-mono) !important;
-    font-size: 0.75rem !important;
+    font-size: 0.7rem !important;
     text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+}
+
+.hipps-breakdown .item-value {
+    color: #FFFFFF !important;
+    font-family: var(--font-mono) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
 }
 
 .hipps-payment {
