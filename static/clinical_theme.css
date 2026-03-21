@@ -752,6 +752,315 @@ h1, h2, h3, .main-title, .results-title, .page-title,
     }
 }
 
+/* ---- CONTRAST FIXES: override all hardcoded dark-on-light colors ---- */
+
+/* Dark text colors that blend into navy backgrounds */
+.form-label,
+.zip-summary,
+.info-label,
+.info-value,
+.result-content pre,
+.prompt-content h3,
+.prompt-content p,
+.cta-section h3,
+.social-proof p,
+.card-description,
+.followup,
+.result-card h3,
+.payment-disclaimer,
+.section-content p,
+.error-message,
+.page-subtitle,
+.page-header p {
+    color: var(--text-secondary) !important;
+}
+
+/* All paragraphs and spans inside cards */
+.consolidated-results-card p,
+.consolidated-results-card span:not(.highlight-value):not(.detail-label),
+.hipps-result p,
+.recert-results p,
+.recert-results-warning,
+.info-card-description,
+.cta-description {
+    color: var(--text-secondary) !important;
+}
+
+/* Headings that use hardcoded dark colors */
+.results-title,
+.section-title,
+.card-title,
+.info-card-title,
+.cta-title,
+.page-title,
+.recert-results-title {
+    color: var(--text-primary) !important;
+}
+
+/* Input text and placeholders */
+input, textarea, select {
+    color: var(--text-primary) !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Backgrounds that were light gray on light theme */
+.result-content,
+.focus-row,
+.pdgm-group-row,
+.billable-row,
+.payment-amount-row {
+    background: var(--bg-section) !important;
+    border-color: var(--border-color) !important;
+}
+
+.billable-yes {
+    background: rgba(45, 212, 191, 0.15) !important;
+    color: var(--accent) !important;
+    border-color: rgba(45, 212, 191, 0.3) !important;
+}
+
+.billable-no {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* PDGM group value gradient text — override for dark bg */
+.pdgm-group-value {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    -webkit-text-fill-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* Payment section */
+.payment-amount-value {
+    color: var(--accent) !important;
+}
+
+.payment-detail-value {
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.payment-disclaimer {
+    background: var(--bg-section) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* LUPA alert */
+.lupa-alert {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Follow-up section */
+.followup {
+    background: var(--bg-section) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Error styling */
+.error {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Welcome banner / login status */
+.welcome-banner {
+    background: var(--bg-section) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.login-status {
+    background: var(--accent-glow) !important;
+    color: var(--accent) !important;
+    border-color: rgba(45, 212, 191, 0.3) !important;
+}
+
+/* Info cards */
+.info-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.info-card-icon {
+    color: var(--accent) !important;
+}
+
+/* Feature cards */
+.feature-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.feature-card::before {
+    background: linear-gradient(90deg, var(--accent), var(--amber)) !important;
+}
+
+.instant-results .card-icon,
+.trusted-agencies .card-icon,
+.always-accurate .card-icon {
+    background: var(--bg-section) !important;
+    color: var(--accent) !important;
+}
+
+/* CTA section */
+.cta-section {
+    background: var(--bg-section) !important;
+    border-color: var(--border-color) !important;
+}
+
+.cta-button {
+    background: var(--accent) !important;
+    color: #0D1B2A !important;
+    border-radius: 4px !important;
+}
+
+/* Registration prompt */
+.registration-prompt {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.btn-primary {
+    background: var(--accent) !important;
+    color: #0D1B2A !important;
+    border-radius: 4px !important;
+}
+
+/* Social proof */
+.social-proof {
+    background: var(--bg-section) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Result card legacy */
+.result-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.result-card h3 {
+    color: var(--text-primary) !important;
+}
+
+/* Section headers with colored backgrounds */
+.pdgm-section .section-header,
+.payment-section .section-header,
+.lupa-section .section-header {
+    background: var(--bg-section) !important;
+}
+
+.pdgm-section .section-icon,
+.payment-section .section-icon {
+    color: var(--accent) !important;
+}
+
+.lupa-section .section-icon {
+    color: #f87171 !important;
+}
+
+/* Table styles */
+.responsive-table th {
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.responsive-table td {
+    color: var(--text-primary) !important;
+}
+
+/* Roadmap container border and background */
+.roadmap-container {
+    border-color: var(--accent) !important;
+    background: var(--bg-section) !important;
+}
+
+.roadmap-container h4 {
+    color: var(--accent) !important;
+}
+
+.discipline-select {
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Recert page specific */
+.recert-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.calculator-section {
+    background: var(--bg-section) !important;
+    border-color: var(--border-color) !important;
+}
+
+.calculator-icon {
+    color: var(--accent) !important;
+}
+
+.calculate-button {
+    background: var(--accent) !important;
+    color: #0D1B2A !important;
+    border-radius: 4px !important;
+}
+
+.recert-results {
+    background: var(--bg-section) !important;
+    border-color: var(--accent) !important;
+}
+
+.recert-results-icon {
+    color: var(--accent) !important;
+}
+
+.recert-results-date {
+    color: var(--accent) !important;
+}
+
+.action-button {
+    background: var(--accent) !important;
+    color: #0D1B2A !important;
+    border-radius: 4px !important;
+}
+
+.action-button.download {
+    background: var(--amber) !important;
+}
+
+.email-input {
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.recert-footer {
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
+}
+
+.recert-footer strong {
+    color: var(--text-secondary) !important;
+}
+
+/* Status indicator */
+.status-indicator {
+    background: var(--accent) !important;
+}
+
 /* ---- Print ---- */
 @media print {
     body { background: white !important; color: black !important; }
