@@ -98,28 +98,8 @@ class PDGMNavigation {
                         <span class="menu-icon">🏠</span>
                         Home / PDGM Lookup
                     </a>
-                    <a href="/batch" class="menu-item">
-                        <span class="menu-icon">📊</span>
-                        Batch Processing
-                    </a>
-                    <a href="/support" class="menu-item">
-                        <span class="menu-icon">❓</span>
-                        Support Center
-                    </a>
                 </div>
-                
-                <div class="menu-section">
-                    <h4>Account</h4>
-                    <a href="/auth/profile" class="menu-item">
-                        <span class="menu-icon">👤</span>
-                        Profile
-                    </a>
-                    <a href="/auth/upgrade" class="menu-item">
-                        <span class="menu-icon">⭐</span>
-                        Upgrade
-                    </a>
-                </div>
-                
+
                 <div class="menu-section">
                     <h4>Recent Pages</h4>
                     <div id="recent-pages-list">
