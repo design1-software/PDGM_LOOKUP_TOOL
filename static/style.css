@@ -1092,11 +1092,11 @@ body {
 
     /* Ensure the disclaimer/footer is never hidden behind a sticky query block on mobile */
     .main-content {
-        padding-bottom: 6rem;
+        padding-bottom: 8rem;
     }
 
     .disclaimer {
-        margin-bottom: 2rem;
+        margin-bottom: 3rem;
     }
 
     .header {

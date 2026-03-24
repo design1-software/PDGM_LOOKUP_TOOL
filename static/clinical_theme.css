@@ -189,9 +189,11 @@ h1, h2, h3, .main-title, .results-title, .page-title,
         display: none !important;
     }
 
-    /* Disclaimer and footer at bottom */
+    /* Disclaimer and footer at bottom — start at column 2 so the sticky
+       left form panel never overlaps them */
     .disclaimer, .footer {
-        grid-column: 1 / -1 !important;
+        grid-column: 2 / -1 !important;
+        margin-bottom: 1.5rem !important;
     }
 
     /* Export section in center column */
