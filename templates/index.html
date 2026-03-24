@@ -962,7 +962,13 @@
         // ---- RECENT SEARCHES ----
         (function() {
             const KEY = 'pdgm-recent-searches';
+            const SCHEMA_VER = '2'; // bump when stored format changes
             const MAX = 10;
+            // Migrate: clear old entries that stored codes without decimal notation
+            if (localStorage.getItem('pdgm-search-schema') !== SCHEMA_VER) {
+                localStorage.removeItem(KEY);
+                localStorage.setItem('pdgm-search-schema', SCHEMA_VER);
+            }
             window.recentSearches = {
                 getAll: function() { return JSON.parse(localStorage.getItem(KEY) || '[]'); },
                 add: function(query, icd10) {
@@ -1018,7 +1024,7 @@
     </script>
 
     <!-- Enhanced Loading Indicators -->
-    <script src="/static/universal_navigation.js?v=4"></script>
+    <script src="/static/universal_navigation.js?v=5"></script>
     <script src="/static/enhanced_query_progress.js?v=6"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
