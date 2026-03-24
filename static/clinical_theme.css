@@ -105,8 +105,13 @@ h1, h2, h3, .main-title, .results-title, .page-title,
 }
 
 .header-logo {
-    height: 40px !important;
-    filter: brightness(1.1) !important;
+    height: 64px !important;
+    width: auto !important;
+    /* boost brightness and add a subtle teal glow so the logo stands out
+       against the dark header background */
+    filter: brightness(1.35)
+            drop-shadow(0 0 6px rgba(16, 185, 129, 0.45))
+            drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) !important;
 }
 
 /* ---- Three-Panel Layout ---- */
