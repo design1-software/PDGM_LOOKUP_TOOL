@@ -2,14 +2,14 @@
 
 from typing import Any, Dict
 from .repository import normalize_icd10, get_icd10_map, search_icd10, map_phrase_to_code
-from .impl import parse_pdgm_details
+from .impl import parse_pdgm_details, format_icd10
 
 
 def explain_pdgm_for_icd10(code: str) -> Dict[str, Any]:
     norm = normalize_icd10(code)
     mapping = get_icd10_map().get(norm, {})
     details = parse_pdgm_details(mapping)
-    return {'icd10': norm, 'raw': mapping, 'details': details}
+    return {'icd10': format_icd10(norm), 'raw': mapping, 'details': details}
 
 
 def lookup_pdgm(query: str) -> Dict[str, Any]:

@@ -139,7 +139,7 @@ class PDGMQueryProgress {
         // Set timeout for long-running queries
         this.timeoutId = setTimeout(() => {
             this.handleTimeout();
-        }, 30000); // 30 second timeout
+        }, 60000); // 60 second timeout
     }
 
     animateProgress() {
@@ -330,6 +330,11 @@ class PDGMQueryProgress {
     }
 
     handleError(error) {
+        // AbortError means the user cancelled — don't show an error
+        if (error.name === 'AbortError') {
+            return;
+        }
+
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
 
@@ -337,7 +342,7 @@ class PDGMQueryProgress {
         container.innerHTML = `
             <div class="error-container">
                 <h3>Query Failed</h3>
-                <p class="error-message">${error.message || 'An unexpected error occurred'}</p>
+                <p class="error-message">${error.message && error.message !== 'Failed to fetch' ? error.message : 'An unexpected error occurred. Please try again.'}</p>
                 <div class="error-actions">
                     <button onclick="pdgmProgress.retryQuery()">Retry</button>
                     <button onclick="pdgmProgress.newQuery()">New Query</button>

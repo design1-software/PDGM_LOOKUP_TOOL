@@ -365,7 +365,7 @@
             <details class="disclaimer">
                 <summary class="arrow-link">&#x2B05; Disclaimer</summary>
                 <p>
-                    Data derived from HH PPS Grouper Software PDGM v07.1.26 (April 2026).
+                    Data derived from HH PPS Grouper Software PDGM v07.1.26 (March 2026).
                     Use of this tool does not replace clinical judgment. Always verify
                     ICD-10 codes and PDGM guidance with official resources. This tool is
                     not intended for direct billing, and compliance remains the user's
@@ -457,7 +457,7 @@
                         if (results.length) {
                             suggestionsBox.innerHTML = results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
                         } else {
-                            suggestionsBox.innerHTML = '<div class="autocomplete-item">No match</div>';
+                            suggestionsBox.innerHTML = '<div class="autocomplete-item" style="color:#64748b;font-style:italic;">No suggestions — try a more specific term or type an ICD-10 code (e.g. E11.65)</div>';
                         }
                         suggestionsBox.style.display = 'block';
                     } catch (e) {

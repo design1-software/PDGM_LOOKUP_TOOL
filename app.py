@@ -117,12 +117,26 @@ def format_pdgm_group(name: str) -> str:
 def search_icd10_codes(prefix: str, limit: int = 10):
     norm = normalize_icd10(prefix)
     results = []
+
+    # First pass: exact ICD-10 code prefix match
     for code in sorted(icd10_data):
         if code.startswith(norm):
             row = icd10_data[code]
             results.append({"code": format_icd10(row["icd10_code"]), "description": row.get("description", "")})
             if len(results) >= limit:
                 break
+
+    # Second pass: description substring match (for natural language like "diabetes")
+    if not results:
+        term = prefix.strip().lower()
+        for code in sorted(icd10_data):
+            row = icd10_data[code]
+            desc = row.get("description", "").lower()
+            if term in desc:
+                results.append({"code": format_icd10(row["icd10_code"]), "description": row.get("description", "")})
+                if len(results) >= limit:
+                    break
+
     return results
 
 
