@@ -156,19 +156,12 @@
         window.copyToClipboard = function () {
             if (!window.currentResults) return;
             const data = window.currentResults;
-            const icd10 = data.icd10 || data.icd_code || '';
+            var raw = data.icd10 || data.icd_code || '';
+            // Ensure ICD-10 decimal notation (e.g. E1165 → E11.65)
+            var icd10 = (raw.includes('.') || raw.length <= 3) ? raw : raw.slice(0, 3) + '.' + raw.slice(3);
             const pdgmGroup = data.raw?.pdgm_clinical_group_name || data.pdgm_group || '';
-            const description = data.raw?.description || data.description || '';
-            let text = 'PDGM Lookup Results\n\nQuery: ' + window.currentQuery +
-                '\nICD-10: ' + icd10 + '\nClinical Group: ' + pdgmGroup +
-                '\nDescription: ' + description;
-            if (data.payment && data.payment.estimated_payment) {
-                var p = data.payment;
-                text += '\n\nEstimated Reimbursement: $' + p.estimated_payment.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                text += '\nBase Rate: $' + p.base_rate.toLocaleString('en-US', { minimumFractionDigits: 2 });
-                text += '\nWage Index: ' + p.wage_index.toFixed(3);
-                if (p.is_lupa) text += '\nLUPA Alert: Visit count below threshold (' + p.lupa_threshold + ')';
-            }
+            const description = (data.raw?.description || data.description || '').replace(/\.$/, '');
+            var text = icd10 + ', ' + pdgmGroup + ', ' + description;
 
             const btn = event.target.closest('.btn-export') || event.target;
             const origText = btn.textContent;
