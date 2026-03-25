@@ -141,10 +141,7 @@ h1, h2, h3, .main-title, .results-title, .page-title,
         margin: 0 !important;
         max-width: none !important;
         border-radius: 0 !important;
-        border-right: 1px solid var(--border-color) !important;
         padding: 1.5rem !important;
-        position: sticky !important;
-        top: 52px !important;
         height: calc(100vh - 52px) !important;
         overflow-y: auto !important;
         box-shadow: none !important;
@@ -179,8 +176,6 @@ h1, h2, h3, .main-title, .results-title, .page-title,
         border-radius: 0 !important;
         margin: 0 !important;
         padding: 1.5rem !important;
-        position: sticky !important;
-        top: 52px !important;
         height: calc(100vh - 52px) !important;
         overflow-y: auto !important;
         display: block !important;
