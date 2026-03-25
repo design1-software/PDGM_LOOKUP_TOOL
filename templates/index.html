@@ -504,10 +504,6 @@
             loading.style.display = 'block';
             responseContent.innerHTML = '';
 
-            // Hide hero logo while results load/show
-            const heroLogo = document.getElementById('hero-logo-area');
-            if (heroLogo) heroLogo.style.display = 'none';
-
             // Hide export sections initially
             const exportSection = document.getElementById('export-section');
             const registrationPrompt = document.getElementById('registration-prompt');
@@ -1025,6 +1021,30 @@
                 '<div class="footer"><p>PDGM Lookup Tool — For informational purposes only.</p></div></body></html>');
             w.document.close(); w.focus(); w.print();
         }
+
+        // ---- HERO LOGO VISIBILITY CONTROLLER ----
+        // Show hero when #results is hidden; hide it when results are visible.
+        // Uses MutationObserver so it reacts to ANY code that shows/hides results.
+        (function() {
+            function syncHero() {
+                const results = document.getElementById('results');
+                const hero = document.getElementById('hero-logo-area');
+                if (!hero) return;
+                const resultsVisible = results && results.style.display !== 'none';
+                hero.style.display = resultsVisible ? 'none' : 'flex';
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Set initial state
+                syncHero();
+
+                // Watch for results section show/hide
+                const results = document.getElementById('results');
+                if (results) {
+                    new MutationObserver(syncHero).observe(results, { attributes: true, attributeFilter: ['style'] });
+                }
+            });
+        })();
     </script>
 
     <!-- Enhanced Loading Indicators -->
