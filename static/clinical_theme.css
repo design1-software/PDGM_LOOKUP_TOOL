@@ -1122,3 +1122,204 @@ input::placeholder, textarea::placeholder {
     body { background: white !important; color: black !important; }
     .header, .footer, .hipps-panel, .export-section { display: none !important; }
 }
+
+/* ============================================================
+   PREMIUM POLISH — CSS-only upgrades, no layout changes
+   ============================================================ */
+
+/* Accent top-line (pure decoration) */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--amber));
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Subtle ambient glow on container (not fixed, scrolls with page) */
+.container {
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.03) 0%, transparent 60%);
+}
+
+/* Typography: optimise rendering */
+h1, h2, h3 {
+    text-rendering: optimizeLegibility !important;
+}
+
+/* Tabular nums for data values */
+.detail-value, .highlight-value, .icd-code,
+.payment-amount-value, .payment-detail-value,
+.hipps-code-display .code, .hipps-code-char,
+.hipps-breakdown .item-value,
+.hipps-payment .amount {
+    font-feature-settings: 'tnum' !important;
+}
+
+/* Refined form label — accent bar instead of QUERY:// prefix */
+.form-label::before {
+    content: '' !important;
+    display: inline-block;
+    width: 3px;
+    height: 1em;
+    background: var(--accent);
+    margin-right: 8px;
+    vertical-align: middle;
+    border-radius: 2px;
+}
+
+/* Double-ring focus states */
+.form-input:focus,
+.zip-input:focus,
+.visit-input:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent) !important;
+    outline: none !important;
+}
+
+/* Results card left accent border */
+.consolidated-results-card {
+    border-left: 3px solid var(--accent) !important;
+}
+
+/* Alternating detail rows */
+.detail-row:nth-child(even) {
+    background: rgba(27, 48, 71, 0.25);
+    border-radius: 3px;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+/* Card hover — subtle lift */
+.consolidated-results-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.consolidated-results-card:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Button press feedback */
+.btn-submit:active,
+.btn-hipps:active,
+.btn-export:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Header subtle bottom glow */
+.header {
+    box-shadow: 0 1px 0 0 rgba(45, 212, 191, 0.08) !important;
+}
+.header.scrolled {
+    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.4), 0 1px 0 0 rgba(45, 212, 191, 0.1) !important;
+}
+
+/* Footer refinement */
+.footer {
+    text-align: center !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.02em !important;
+    opacity: 0.8;
+}
+
+/* Smooth scrollbar for panels */
+.lookup-form,
+#results,
+.results-section,
+#hipps-panel,
+.hipps-panel {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar — thinner, matches theme */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(45, 212, 191, 0.2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(45, 212, 191, 0.4); }
+
+/* Selection color */
+::selection {
+    background: rgba(45, 212, 191, 0.3);
+    color: #fff;
+}
+
+/* Lead capture modal — dark theme */
+#lead-capture-overlay > div {
+    border: 1px solid rgba(45, 212, 191, 0.15) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5) !important;
+}
+
+#lead-capture-overlay button[type="submit"] {
+    transition: all 0.2s ease !important;
+}
+#lead-capture-overlay button[type="submit"]:hover {
+    box-shadow: 0 4px 20px var(--accent-glow) !important;
+    transform: translateY(-1px);
+}
+
+/* HIPPS panel heading — accent underline */
+.hipps-panel h4 {
+    padding-bottom: 0.75rem !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    margin-bottom: 1rem !important;
+}
+
+/* Roadmap container — use theme colors */
+.roadmap-container {
+    border: 1px solid var(--accent) !important;
+    background: var(--bg-section) !important;
+    border-radius: 6px !important;
+}
+
+/* Disclaimer — quieter */
+.disclaimer {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+.disclaimer:hover,
+.disclaimer[open] {
+    opacity: 1;
+}
+
+/* Smooth page transitions */
+.results-section {
+    animation: none;
+}
+
+/* Results entrance */
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.consolidated-results-card {
+    animation: fadeSlideIn 0.3s ease both;
+}
+
+.consolidated-results-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.consolidated-results-card:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* Loading — typing dots */
+.spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border-width: 3px !important;
+    border-color: var(--border-color) !important;
+    border-top-color: var(--accent) !important;
+}
+
+/* Mobile: ensure results scroll naturally */
+@media (max-width: 1023px) {
+    .results-section {
+        overflow-y: visible !important;
+        height: auto !important;
+    }
+}
