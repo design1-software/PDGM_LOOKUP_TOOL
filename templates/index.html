@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='hipps_calculator.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='interactive_followup.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=8">
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v=2">
@@ -92,8 +92,9 @@
                 <img src="{{ url_for('static', filename='pdgm_logo.png') }}" alt="PDGM Lookup Tool"
                     style="max-width:200px; margin-bottom:1.5rem;">
                 <h2 style="color:#0b3a53; margin-bottom:1rem; font-size:1.5rem;">Access the PDGM Lookup Tool</h2>
-                <p style="margin-bottom:2rem; color:#4b5563;">Please provide your name and email to unlock this free
+                <p style="margin-bottom:1.5rem; color:#4b5563;">Please provide your name and email to unlock this free
                     tool instantly.</p>
+                <p style="margin-bottom:1.5rem; font-size:0.75rem; color:#9ca3af;">Your information is stored securely and never sold. This tool does not store or transmit protected health information (PHI). By continuing you agree to our data handling practices.</p>
                 <form id="lead-capture-form" style="display:flex; flex-direction:column; gap:1rem;">
                     <input type="text" id="lead-name" name="name" placeholder="Your Name" required
                         style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:4px; font-size:1rem;">
@@ -266,90 +267,6 @@
                     </div>
                 </div>
 
-                <!-- HIPPS Code Calculator -->
-                <div id="hipps-panel" class="hipps-panel">
-                    <h4>
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        HIPPS Code Calculator
-                    </h4>
-
-                    <div class="hipps-row">
-                        <div class="hipps-field">
-                            <label>Admission Source</label>
-                            <div class="hipps-radio-group">
-                                <label><input type="radio" name="admission_source" value="1" checked> Community</label>
-                                <label><input type="radio" name="admission_source" value="2"> Institutional</label>
-                            </div>
-                        </div>
-                        <div class="hipps-field">
-                            <label>Episode Timing</label>
-                            <div class="hipps-radio-group">
-                                <label><input type="radio" name="episode_timing" value="1" checked> Early (1st 30-day)</label>
-                                <label><input type="radio" name="episode_timing" value="2"> Late (2nd+ 30-day)</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="hipps-field" style="margin-bottom: 1rem;">
-                        <label>Secondary Diagnoses (for comorbidity adjustment)</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="secondary-dx-input" placeholder="Enter ICD-10 code" style="flex:1; padding:0.5rem; border:1px solid #d1d5db; border-radius:4px;">
-                            <button type="button" onclick="addSecondaryDx()" class="btn-export" style="white-space:nowrap;">+ Add</button>
-                        </div>
-                        <div id="secondary-dx-tags" class="secondary-dx-list"></div>
-                    </div>
-
-                    <button type="button" id="gg-toggle-btn" class="gg-scores-toggle" onclick="toggleGGScores()">
-                        Enter Functional Scores (GG Items) — optional
-                    </button>
-                    <div id="gg-scores-section" style="display:none;">
-                        <div class="gg-scores-grid">
-                            <div class="gg-section-title">GG0130 — Self-Care</div>
-                            <div class="hipps-field"><label>A: Eating</label><select data-gg="gg0130" data-item="A"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>B: Oral hygiene</label><select data-gg="gg0130" data-item="B"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>C: Toileting hygiene</label><select data-gg="gg0130" data-item="C"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>E: Shower/bathe</label><select data-gg="gg0130" data-item="E"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>F: Upper body dressing</label><select data-gg="gg0130" data-item="F"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>G: Lower body dressing</label><select data-gg="gg0130" data-item="G"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>H: Footwear</label><select data-gg="gg0130" data-item="H"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-
-                            <div class="gg-section-title">GG0170 — Mobility</div>
-                            <div class="hipps-field"><label>B: Sit to lying</label><select data-gg="gg0170" data-item="B"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>C: Lying to sitting</label><select data-gg="gg0170" data-item="C"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>D: Sit to stand</label><select data-gg="gg0170" data-item="D"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>E: Chair/bed transfer</label><select data-gg="gg0170" data-item="E"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>F: Toilet transfer</label><select data-gg="gg0170" data-item="F"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>G: Car transfer</label><select data-gg="gg0170" data-item="G"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>I: Walk 10 feet</label><select data-gg="gg0170" data-item="I"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>J: Walk 50 ft w/ turns</label><select data-gg="gg0170" data-item="J"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>K: Walk 150 feet</label><select data-gg="gg0170" data-item="K"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>L: Walk uneven surfaces</label><select data-gg="gg0170" data-item="L"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                            <div class="hipps-field"><label>R: Pick up object</label><select data-gg="gg0170" data-item="R"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
-                        </div>
-                    </div>
-
-                    <!-- HIPPS Progress Indicator -->
-                    <div class="hipps-progress">
-                        <div class="hipps-progress-track"><div id="hipps-progress-fill" class="hipps-progress-fill"></div></div>
-                        <span id="hipps-progress-text" class="hipps-progress-text">0/4 sections</span>
-                    </div>
-
-                    <button type="button" id="btn-calc-hipps" class="btn-hipps" onclick="calculateHIPPS()">
-                        Calculate HIPPS Code
-                    </button>
-
-                    <!-- Impact Meter -->
-                    <div id="impact-meter" class="impact-meter" style="display:none;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.8rem; color:var(--text-muted);">Payment Impact</span>
-                            <span id="impact-delta" class="impact-delta"></span>
-                        </div>
-                        <div class="impact-bar"><div id="impact-fill" class="impact-fill" style="width:50%;"></div></div>
-                    </div>
-
-                    <div id="hipps-result" class="hipps-result" style="display:none;"></div>
-                </div>
-
                 <!-- Copy Results -->
                 <div id="export-section" class="export-section" style="display: none;">
                     <div class="export-buttons"
@@ -359,6 +276,94 @@
                         <button onclick="openComparisonMode()" class="compare-btn">Compare Diagnoses</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- HIPPS Code Calculator — direct child of .main-content for CSS Grid column 3 -->
+            <div id="hipps-panel" class="hipps-panel">
+                <h4>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    HIPPS Code Calculator
+                </h4>
+
+                <div class="hipps-row">
+                    <div class="hipps-field">
+                        <label>Admission Source</label>
+                        <div class="hipps-radio-group">
+                            <label><input type="radio" name="admission_source" value="1" checked> Community</label>
+                            <label><input type="radio" name="admission_source" value="2"> Institutional</label>
+                        </div>
+                    </div>
+                    <div class="hipps-field">
+                        <label>Episode Timing</label>
+                        <div class="hipps-radio-group">
+                            <label><input type="radio" name="episode_timing" value="1" checked> Early (1st 30-day)</label>
+                            <label><input type="radio" name="episode_timing" value="2"> Late (2nd+ 30-day)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hipps-field" style="margin-bottom: 1rem;">
+                    <label>Secondary Diagnoses (for comorbidity adjustment)</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="secondary-dx-input" placeholder="Enter ICD-10 code" style="flex:1; padding:0.5rem; border:1px solid #d1d5db; border-radius:4px;">
+                        <button type="button" onclick="addSecondaryDx()" class="btn-export" style="white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="secondary-dx-tags" class="secondary-dx-list"></div>
+                </div>
+
+                <div class="gg-scores-notice" style="font-size:0.75rem; color:var(--amber); background:var(--amber-glow); padding:0.5rem 0.75rem; border-radius:4px; margin-bottom:0.75rem;">
+                    ⚠ GG functional scores are major HIPPS drivers. Omitting them may significantly affect the calculated reimbursement.
+                </div>
+
+                <button type="button" id="gg-toggle-btn" class="gg-scores-toggle" onclick="toggleGGScores()">
+                    Enter Functional Scores (GG Items)
+                </button>
+                <div id="gg-scores-section" style="display:none;">
+                    <div class="gg-scores-grid">
+                        <div class="gg-section-title">GG0130 — Self-Care</div>
+                        <div class="hipps-field"><label>A: Eating</label><select data-gg="gg0130" data-item="A"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>B: Oral hygiene</label><select data-gg="gg0130" data-item="B"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>C: Toileting hygiene</label><select data-gg="gg0130" data-item="C"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>E: Shower/bathe</label><select data-gg="gg0130" data-item="E"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>F: Upper body dressing</label><select data-gg="gg0130" data-item="F"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>G: Lower body dressing</label><select data-gg="gg0130" data-item="G"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>H: Footwear</label><select data-gg="gg0130" data-item="H"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+
+                        <div class="gg-section-title">GG0170 — Mobility</div>
+                        <div class="hipps-field"><label>B: Sit to lying</label><select data-gg="gg0170" data-item="B"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>C: Lying to sitting</label><select data-gg="gg0170" data-item="C"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>D: Sit to stand</label><select data-gg="gg0170" data-item="D"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>E: Chair/bed transfer</label><select data-gg="gg0170" data-item="E"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>F: Toilet transfer</label><select data-gg="gg0170" data-item="F"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>G: Car transfer</label><select data-gg="gg0170" data-item="G"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>I: Walk 10 feet</label><select data-gg="gg0170" data-item="I"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>J: Walk 50 ft w/ turns</label><select data-gg="gg0170" data-item="J"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>K: Walk 150 feet</label><select data-gg="gg0170" data-item="K"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>L: Walk uneven surfaces</label><select data-gg="gg0170" data-item="L"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                        <div class="hipps-field"><label>R: Pick up object</label><select data-gg="gg0170" data-item="R"><option value="">Default</option><option value="6">6 - Independent</option><option value="5">5 - Setup</option><option value="4">4 - Supervision</option><option value="3">3 - Partial assist</option><option value="2">2 - Substantial assist</option><option value="1">1 - Dependent</option></select></div>
+                    </div>
+                </div>
+
+                <!-- HIPPS Progress Indicator -->
+                <div class="hipps-progress">
+                    <div class="hipps-progress-track"><div id="hipps-progress-fill" class="hipps-progress-fill"></div></div>
+                    <span id="hipps-progress-text" class="hipps-progress-text">0/4 sections</span>
+                </div>
+
+                <button type="button" id="btn-calc-hipps" class="btn-hipps" onclick="calculateHIPPS()">
+                    Calculate HIPPS Code
+                </button>
+
+                <!-- Impact Meter -->
+                <div id="impact-meter" class="impact-meter" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--text-muted);">Payment Impact</span>
+                        <span id="impact-delta" class="impact-delta"></span>
+                    </div>
+                    <div class="impact-bar"><div id="impact-fill" class="impact-fill" style="width:50%;"></div></div>
+                </div>
+
+                <div id="hipps-result" class="hipps-result" style="display:none;"></div>
             </div>
 
             <!-- Marketing sections removed for simple tool UI -->

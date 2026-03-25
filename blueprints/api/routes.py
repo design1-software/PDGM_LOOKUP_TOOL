@@ -1,9 +1,20 @@
-from flask import jsonify, current_app, request
+from flask import jsonify, current_app, request, session
 from schemas.pdgm import (
     ValidationError, validate_lookup_request, validate_roadmap_request,
     validate_assessment_request, validate_hipps_request,
 )
 from . import bp
+
+
+def require_lead_capture(f):
+    """Reject API calls when the lead gate hasn't been completed."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('lead_captured'):
+            return jsonify({'error': 'Please provide your name and email to use this tool.'}), 403
+        return f(*args, **kwargs)
+    return decorated
 
 
 @bp.get('/healthz')
@@ -18,6 +29,7 @@ def version():
 
 
 @bp.post('/api/lookup')
+@require_lead_capture
 def api_lookup():
     """CSV-driven PDGM lookup for an ICD-10 code or phrase."""
     try:
