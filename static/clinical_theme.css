@@ -1095,8 +1095,11 @@ input::placeholder, textarea::placeholder {
         height: calc(100vh - 52px) !important;
         overflow-y: auto !important;
         padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        text-align: center !important;
     }
 }
 
