@@ -1077,6 +1077,30 @@ input::placeholder, textarea::placeholder {
     background: var(--accent) !important;
 }
 
+/* ---- Hero Logo Area ---- */
+.hero-logo-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 1rem 2rem;
+    opacity: 0.92;
+    transition: opacity 0.4s ease;
+}
+
+.hero-logo-animated {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 24px rgba(45, 212, 191, 0.18));
+}
+
+@media (max-width: 900px) {
+    .hero-logo-animated {
+        max-width: 340px;
+    }
+}
+
 /* ---- Print ---- */
 @media print {
     body { background: white !important; color: black !important; }
