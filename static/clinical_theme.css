@@ -1087,12 +1087,25 @@ input::placeholder, textarea::placeholder {
     transition: opacity 0.4s ease;
 }
 
+/* On desktop: slot hero into the center column exactly where #results lives */
+@media (min-width: 900px) {
+    .hero-logo-area {
+        grid-column: 2 !important;
+        grid-row: 1 / -1 !important;
+        height: calc(100vh - 52px) !important;
+        overflow-y: auto !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+}
+
 .hero-logo-animated {
-    width: 100%;
-    max-width: 520px;
+    width: 90%;
+    max-width: 560px;
     height: auto;
     display: block;
-    filter: drop-shadow(0 4px 24px rgba(45, 212, 191, 0.18));
+    filter: drop-shadow(0 4px 32px rgba(45, 212, 191, 0.22));
 }
 
 @media (max-width: 900px) {
