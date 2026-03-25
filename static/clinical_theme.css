@@ -1161,24 +1161,15 @@ input::placeholder, textarea::placeholder {
     height: 2px;
     background: linear-gradient(90deg, var(--accent), var(--amber));
     z-index: 1000;
+    pointer-events: none;
 }
 
 /* ---- Subtle Background Texture ---- */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.03) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
+/* Applied to container instead of body::before to avoid fixed-overlay scroll issues on mobile */
 .container {
     position: relative;
     z-index: 1;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(45, 212, 191, 0.03) 0%, transparent 70%);
 }
 
 /* ---- Header Refinements ---- */
@@ -1206,6 +1197,15 @@ h1, h2, h3 {
 
 .results-section {
     line-height: 1.7 !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: results section scrolls with the page */
+@media (max-width: 1023px) {
+    .results-section {
+        overflow-y: visible !important;
+        height: auto !important;
+    }
 }
 
 .detail-label {
