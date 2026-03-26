@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='hipps_calculator.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='interactive_followup.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=9">
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v=2">
@@ -64,8 +64,17 @@
         <!-- Header with Authentication -->
         <header class="header">
             <div class="logo-section">
-                <img src="{{ url_for('static', filename='pdgm_logo.png') }}"
-                    alt="PDGM Lookup Tool" class="header-logo">
+                <svg class="header-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" height="48" aria-label="PDGM Lookup - Healthcare Software Tool">
+                    <line x1="37.5" y1="36.5" x2="46.5" y2="45.5" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round"/>
+                    <circle cx="24" cy="24" r="19.5" fill="#132147" stroke="#FFFFFF" stroke-width="3.5"/>
+                    <circle class="pdgm-spin-ring" cx="24" cy="24" r="13.5" fill="none" stroke="#00BFA5" stroke-width="3" stroke-dasharray="64 22" stroke-linecap="round"/>
+                    <circle cx="24" cy="24" r="7" fill="none" stroke="#00BFA5" stroke-width="1" opacity="0.5"/>
+                    <rect x="17.5" y="22" width="13" height="4" rx="1.5" fill="#00BFA5"/>
+                    <rect x="22" y="17.5" width="4" height="13" rx="1.5" fill="#00BFA5"/>
+                    <text x="56" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="19" font-weight="700" fill="#FFFFFF" letter-spacing="0.3">PDGM</text>
+                    <text x="114" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="19" font-weight="400" fill="#FFFFFF"> Lookup</text>
+                    <text x="57" y="37" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="8.5" font-weight="600" fill="#00BFA5" letter-spacing="1.4">HEALTHCARE SOFTWARE TOOL</text>
+                </svg>
             </div>
 
             <!-- Lead Information Section -->
@@ -381,7 +390,7 @@
 
             <!-- Hero logo — visible only when no results are showing -->
             <div id="hero-logo-area" class="hero-logo-area">
-                <img src="{{ url_for('static', filename='pdgm_logo.png') }}"
+                <img src="{{ url_for('static', filename='pdgm_logo_animated.gif') }}"
                     alt="PDGM Lookup Tool" class="hero-logo-animated">
             </div>
         </main>

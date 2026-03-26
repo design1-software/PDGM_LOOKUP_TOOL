@@ -1073,6 +1073,19 @@ input::placeholder, textarea::placeholder {
     background: var(--accent) !important;
 }
 
+/* ---- Header SVG Logo Spin Animation ---- */
+@keyframes pdgm-spin {
+    to { transform: rotate(360deg); }
+}
+.pdgm-spin-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pdgm-spin 1.5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .pdgm-spin-ring { animation: none; }
+}
+
 /* ---- Hero Logo Area ---- */
 .hero-logo-area {
     display: flex;
