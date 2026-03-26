@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='hipps_calculator.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='interactive_followup.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=9">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=10">
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v=2">
@@ -1038,21 +1038,21 @@
 
         // ---- HERO LOGO VISIBILITY CONTROLLER ----
         // Show hero when #results is hidden; hide it when results are visible.
-        // Uses MutationObserver so it reacts to ANY code that shows/hides results.
         (function() {
             function syncHero() {
                 const results = document.getElementById('results');
                 const hero = document.getElementById('hero-logo-area');
                 if (!hero) return;
-                const resultsVisible = results && results.style.display !== 'none';
+                const resultsVisible = results &&
+                    results.style.display !== 'none' &&
+                    results.style.display !== '';
                 hero.style.display = resultsVisible ? 'none' : 'flex';
             }
+            // Expose globally so other scripts can call it
+            window.syncHero = syncHero;
 
             document.addEventListener('DOMContentLoaded', function() {
-                // Set initial state
                 syncHero();
-
-                // Watch for results section show/hide
                 const results = document.getElementById('results');
                 if (results) {
                     new MutationObserver(syncHero).observe(results, { attributes: true, attributeFilter: ['style'] });

@@ -157,8 +157,17 @@ h1, h2, h3, .main-title, .results-title, .page-title,
         max-width: none !important;
         padding: 1.5rem !important;
         overflow-y: auto !important;
+        overflow-x: hidden !important;
         height: calc(100vh - 52px) !important;
         min-height: 0 !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+
+    /* Hide hero when results are showing (CSS backup for JS) */
+    #results[style*="display: block"] ~ .hero-logo-area,
+    #results[style*="display:block"] ~ .hero-logo-area {
+        display: none !important;
     }
 
     .recent-searches-section {
