@@ -366,7 +366,7 @@ select:focus {
         -webkit-appearance: none;
     }
     
-    input,
+    input:not([type="radio"]):not([type="checkbox"]),
     textarea,
     select {
         -webkit-appearance: none;
@@ -386,7 +386,7 @@ select:focus {
         -moz-appearance: none;
     }
     
-    input,
+    input:not([type="radio"]):not([type="checkbox"]),
     textarea,
     select {
         -moz-appearance: none;

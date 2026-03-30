@@ -60,6 +60,19 @@
     cursor: pointer;
 }
 
+.hipps-radio-group input[type="radio"] {
+    -webkit-appearance: radio;
+    -moz-appearance: radio;
+    appearance: radio;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #f59e0b;
+}
+
 /* Secondary diagnoses */
 .secondary-dx-list {
     display: flex;
