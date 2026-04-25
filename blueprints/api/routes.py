@@ -3,6 +3,7 @@ from schemas.pdgm import (
     ValidationError, validate_lookup_request, validate_roadmap_request,
     validate_assessment_request, validate_hipps_request,
 )
+from app_core.extensions import limiter
 from . import bp
 
 
@@ -30,6 +31,7 @@ def version():
 
 @bp.post('/api/lookup')
 @require_lead_capture
+@limiter.limit("30 per minute; 500 per hour")
 def api_lookup():
     """CSV-driven PDGM lookup for an ICD-10 code or phrase."""
     try:
@@ -84,6 +86,7 @@ def api_lookup():
 
 @bp.post('/api/roadmap')
 @require_lead_capture
+@limiter.limit("10 per minute; 50 per hour")
 def api_roadmap():
     try:
         body = request.get_json(silent=True) or {}
@@ -100,6 +103,7 @@ def api_roadmap():
 
 @bp.post('/api/assessment')
 @require_lead_capture
+@limiter.limit("10 per minute; 50 per hour")
 def api_assessment():
     try:
         body = request.get_json(silent=True) or {}
@@ -115,6 +119,7 @@ def api_assessment():
 
 @bp.post('/api/hipps')
 @require_lead_capture
+@limiter.limit("30 per minute")
 def api_hipps():
     """Calculate HIPPS code from PDGM dimensions."""
     try:
