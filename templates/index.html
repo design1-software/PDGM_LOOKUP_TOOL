@@ -141,12 +141,18 @@
 
                                 const authSection = document.querySelector('.auth-section');
                                 if (authSection) {
-                                    authSection.innerHTML = `
-                                        <div class="user-menu-enhanced">
-                                            <span class="status-indicator" style="background-color: #10b981;"></span>
-                                            <span class="user-name">${email}</span>
-                                        </div>
-                                    `;
+                                    const menuDiv = document.createElement('div');
+                                    menuDiv.className = 'user-menu-enhanced';
+                                    const indicator = document.createElement('span');
+                                    indicator.className = 'status-indicator';
+                                    indicator.style.backgroundColor = '#10b981';
+                                    const nameSpan = document.createElement('span');
+                                    nameSpan.className = 'user-name';
+                                    nameSpan.textContent = email;
+                                    menuDiv.appendChild(indicator);
+                                    menuDiv.appendChild(nameSpan);
+                                    authSection.innerHTML = '';
+                                    authSection.appendChild(menuDiv);
                                 }
                             } else {
                                 alert(data.error || 'Failed to unlock tool. Please try again.');
@@ -452,6 +458,15 @@
         window.currentResults = null;
         window.currentQuery = null;
 
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         const suggestionsBox = document.getElementById('suggestions');
         const diagnosisInput = document.getElementById('diagnosis-input');
 
@@ -474,10 +489,21 @@
                         if (!resp.ok) return;
                         const data = await resp.json();
                         const results = data.suggestions || data.results || [];
+                        suggestionsBox.innerHTML = '';
                         if (results.length) {
-                            suggestionsBox.innerHTML = results.map(r => `<div class="autocomplete-item" data-code="${r.code}">${r.code} - ${r.description}</div>`).join('');
+                            results.forEach(r => {
+                                const item = document.createElement('div');
+                                item.className = 'autocomplete-item';
+                                item.dataset.code = r.code;
+                                item.textContent = `${r.code} - ${r.description}`;
+                                suggestionsBox.appendChild(item);
+                            });
                         } else {
-                            suggestionsBox.innerHTML = '<div class="autocomplete-item" style="color:#64748b;font-style:italic;">No suggestions — try a more specific term or type an ICD-10 code (e.g. E11.65)</div>';
+                            const noResult = document.createElement('div');
+                            noResult.className = 'autocomplete-item';
+                            noResult.style.cssText = 'color:#64748b;font-style:italic;';
+                            noResult.textContent = 'No suggestions — try a more specific term or type an ICD-10 code (e.g. E11.65)';
+                            suggestionsBox.appendChild(noResult);
                         }
                         suggestionsBox.style.display = 'block';
                     } catch (e) {
@@ -555,10 +581,14 @@
                     if (exportSection) exportSection.style.display = 'block';
                     if (roadmapContainer) roadmapContainer.style.display = 'block';
                 } else {
-                    responseContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    const errDiv = document.createElement('div');
+                    errDiv.className = 'error';
+                    errDiv.textContent = `Error: ${data.error}`;
+                    responseContent.innerHTML = '';
+                    responseContent.appendChild(errDiv);
                 }
             } catch (error) {
-                responseContent.innerHTML = `<div class="error">Network error. Please try again.</div>`;
+                responseContent.innerHTML = '<div class="error">Network error. Please try again.</div>';
                 console.error('Error:', error);
             } finally {
                 loading.style.display = 'none';
@@ -568,6 +598,7 @@
         // Display results with structured JSON data
         function displayResults(data) {
             const responseContent = document.getElementById('response-content');
+            const esc = escapeHtml;
 
             const icd10 = data.icd10 || data.icd_code || 'Not specified';
             const pdgmGroup = data.raw?.pdgm_clinical_group_name || data.pdgm_group || 'Not determined';
@@ -590,15 +621,15 @@
                             <div class="section-content">
                                 <div class="detail-row">
                                     <span class="detail-label">ICD-10 Code:</span>
-                                    <span class="detail-value highlight-value">${icd10}</span>
+                                    <span class="detail-value highlight-value">${esc(icd10)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Clinical Group:</span>
-                                    <span class="detail-value">${pdgmGroup}</span>
+                                    <span class="detail-value">${esc(pdgmGroup)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Description:</span>
-                                    <span class="detail-value">${description}</span>
+                                    <span class="detail-value">${esc(description)}</span>
                                 </div>
                             </div>
                         </div>
@@ -609,11 +640,13 @@
             // Payment estimate section
             const pay = data.payment;
             if (pay && pay.estimated_payment) {
+                const lupaColor = pay.is_lupa ? '#ef4444' : '#10b981';
+                const lupaLabel = pay.is_lupa ? 'LUPA Alert' : 'Estimated Reimbursement';
                 html += `
-                <div class="consolidated-results-card" style="margin-top: 1rem; border-left: 4px solid ${pay.is_lupa ? '#ef4444' : '#10b981'};">
+                <div class="consolidated-results-card" style="margin-top: 1rem; border-left: 4px solid ${lupaColor};">
                     <div class="results-header">
-                        <h3 class="results-title" style="color: ${pay.is_lupa ? '#ef4444' : '#10b981'};">
-                            ${pay.is_lupa ? 'LUPA Alert' : 'Estimated Reimbursement'}
+                        <h3 class="results-title" style="color: ${lupaColor};">
+                            ${esc(lupaLabel)}
                         </h3>
                     </div>
                     <div class="section-content">
@@ -627,7 +660,7 @@
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">PDGM Multiplier:</span>
-                            <span class="detail-value">${pay.pdgm_multiplier}</span>
+                            <span class="detail-value">${esc(pay.pdgm_multiplier)}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Wage Index:</span>
@@ -636,31 +669,36 @@
                         ${pay.is_lupa ? `
                         <div class="detail-row" style="color: #ef4444; font-weight: bold;">
                             <span class="detail-label">LUPA Threshold:</span>
-                            <span class="detail-value">${pay.lupa_threshold} visits</span>
+                            <span class="detail-value">${esc(String(pay.lupa_threshold))} visits</span>
                         </div>` : ''}
-                        <p style="margin-top: 0.75rem; font-size: 0.85rem; color: #6b7280; font-style: italic;">${pay.disclaimer}</p>
+                        <p style="margin-top: 0.75rem; font-size: 0.85rem; color: #6b7280; font-style: italic;">${esc(pay.disclaimer)}</p>
                     </div>
                 </div>
                 `;
             }
 
-            // Red flag alerts
+            // Red flag alerts — build with DOM to avoid injecting f.message via innerHTML
+            responseContent.innerHTML = html;
             if (data.flags && data.flags.length > 0) {
-                html += '<div class="red-flags">';
+                const flagsDiv = document.createElement('div');
+                flagsDiv.className = 'red-flags';
+                const ALLOWED_TYPES = new Set(['error', 'warning', 'info']);
                 data.flags.forEach(function(f) {
-                    var icon = f.type === 'error' ? '&#x26D4;' : f.type === 'warning' ? '&#x26A0;' : '&#x2139;';
-                    html += '<div class="flag-badge flag-' + f.type + '">' + icon + ' ' + f.message + '</div>';
+                    const safeType = ALLOWED_TYPES.has(f.type) ? f.type : 'info';
+                    const icon = safeType === 'error' ? '⛔' : safeType === 'warning' ? '⚠' : 'ℹ';
+                    const badge = document.createElement('div');
+                    badge.className = `flag-badge flag-${safeType}`;
+                    badge.textContent = `${icon} ${f.message}`;
+                    flagsDiv.appendChild(badge);
                 });
-                html += '</div>';
+                responseContent.appendChild(flagsDiv);
             }
 
             // Supply crosswalk
             if (window.getSupplyCrosswalk) {
                 var crosswalk = window.getSupplyCrosswalk(icd10);
-                if (crosswalk) html += window.renderSupplyCrosswalk(crosswalk);
+                if (crosswalk) responseContent.insertAdjacentHTML('beforeend', window.renderSupplyCrosswalk(crosswalk));
             }
-
-            responseContent.innerHTML = html;
 
             // Save to recent searches
             if (window.recentSearches) window.recentSearches.add(window.currentQuery || icd10, icd10);
@@ -998,9 +1036,20 @@
                     const items = this.getAll();
                     if (!items.length) { el.style.display = 'none'; return; }
                     el.style.display = 'block';
-                    el.innerHTML = '<h4>Recent Searches</h4><div class="recent-tags">' +
-                        items.map(function(i) { return '<button class="recent-tag" onclick="document.getElementById(\'diagnosis-input\').value=\'' + i.query + '\'; document.getElementById(\'pdgm-form\').dispatchEvent(new Event(\'submit\'));">' + (i.icd10 || i.query) + '</button>'; }).join('') +
-                        '</div>';
+                    el.innerHTML = '<h4>Recent Searches</h4>';
+                    const tagsDiv = document.createElement('div');
+                    tagsDiv.className = 'recent-tags';
+                    items.forEach(function(i) {
+                        const btn = document.createElement('button');
+                        btn.className = 'recent-tag';
+                        btn.textContent = i.icd10 || i.query;
+                        btn.addEventListener('click', function() {
+                            document.getElementById('diagnosis-input').value = i.query;
+                            document.getElementById('pdgm-form').dispatchEvent(new Event('submit'));
+                        });
+                        tagsDiv.appendChild(btn);
+                    });
+                    el.appendChild(tagsDiv);
                 }
             };
             document.addEventListener('DOMContentLoaded', function() { window.recentSearches.render(); });
@@ -1017,16 +1066,16 @@
             const hippsHTML = hippsEl && hippsEl.style.display !== 'none' ? hippsEl.innerHTML : '';
             const pay = d.payment;
             const w = window.open('', '', 'width=800,height=600');
-            w.document.write('<!DOCTYPE html><html><head><title>PDGM Summary - ' + icd10 + '</title>' +
+            w.document.write('<!DOCTYPE html><html><head><title>PDGM Summary - ' + escapeHtml(icd10) + '</title>' +
                 '<style>body{font-family:Roboto,Arial,sans-serif;max-width:700px;margin:2rem auto;padding:0 1rem;color:#1E293B;}' +
                 'h1{color:#1E293B;border-bottom:3px solid #0EA5E9;padding-bottom:0.5rem;}' +
                 'table{width:100%;border-collapse:collapse;margin:1rem 0;}th,td{padding:0.5rem;text-align:left;border-bottom:1px solid #e2e8f0;}' +
                 'th{background:#f8fafc;font-weight:600;width:40%;}.footer{text-align:center;color:#94a3b8;font-size:0.8rem;margin-top:2rem;border-top:1px solid #e2e8f0;padding-top:1rem;}' +
                 '@media print{body{margin:0;}}</style></head><body>' +
                 '<h1>PDGM Analysis Summary</h1><p style="color:#64748b;">Generated: ' + new Date().toLocaleDateString() + '</p>' +
-                '<table><tr><th>ICD-10 Code</th><td><strong>' + icd10 + '</strong></td></tr>' +
-                '<tr><th>Description</th><td>' + desc + '</td></tr>' +
-                '<tr><th>Clinical Group</th><td>' + group + '</td></tr></table>' +
+                '<table><tr><th>ICD-10 Code</th><td><strong>' + escapeHtml(icd10) + '</strong></td></tr>' +
+                '<tr><th>Description</th><td>' + escapeHtml(desc) + '</td></tr>' +
+                '<tr><th>Clinical Group</th><td>' + escapeHtml(group) + '</td></tr></table>' +
                 (pay && pay.estimated_payment ? '<h2>Payment Estimate</h2><table>' +
                 '<tr><th>Payment Amount</th><td><strong>$' + pay.estimated_payment.toLocaleString('en-US',{minimumFractionDigits:2}) + '</strong></td></tr>' +
                 '<tr><th>Base Rate</th><td>$' + pay.base_rate.toLocaleString('en-US',{minimumFractionDigits:2}) + '</td></tr>' +
