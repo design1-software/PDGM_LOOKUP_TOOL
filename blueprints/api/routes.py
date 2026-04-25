@@ -30,8 +30,8 @@ def version():
 
 
 @bp.post('/api/lookup')
-@require_lead_capture
 @limiter.limit("30 per minute; 500 per hour")
+@require_lead_capture
 def api_lookup():
     """CSV-driven PDGM lookup for an ICD-10 code or phrase."""
     try:
@@ -85,8 +85,8 @@ def api_lookup():
 
 
 @bp.post('/api/roadmap')
-@require_lead_capture
 @limiter.limit("10 per minute; 50 per hour")
+@require_lead_capture
 def api_roadmap():
     try:
         body = request.get_json(silent=True) or {}
@@ -102,8 +102,8 @@ def api_roadmap():
 
 
 @bp.post('/api/assessment')
-@require_lead_capture
 @limiter.limit("10 per minute; 50 per hour")
+@require_lead_capture
 def api_assessment():
     try:
         body = request.get_json(silent=True) or {}
@@ -118,8 +118,8 @@ def api_assessment():
         return jsonify({'error': 'failed to generate assessment'}), 500
 
 @bp.post('/api/hipps')
-@require_lead_capture
 @limiter.limit("30 per minute")
+@require_lead_capture
 def api_hipps():
     """Calculate HIPPS code from PDGM dimensions."""
     try:
@@ -229,6 +229,7 @@ def api_comorbidity_check():
 
 
 @bp.post('/api/compare')
+@limiter.limit("30 per minute")
 @require_lead_capture
 def api_compare():
     """Side-by-side diagnosis comparison."""
@@ -258,6 +259,7 @@ def api_compare():
 
 
 @bp.get('/api/offline-data')
+@limiter.limit("10 per minute")
 @require_lead_capture
 def api_offline_data():
     """Compact ICD-10 map for offline PWA lookups."""
