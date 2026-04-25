@@ -30,6 +30,14 @@ class ProductionConfig(Config):
 
     @staticmethod
     def init_app(app):
+        _DEV_DEFAULT = 'dev-secret-change-me'
+        secret = app.config.get('SECRET_KEY', '')
+        if not secret or secret == _DEV_DEFAULT:
+            raise RuntimeError(
+                'FLASK_SECRET_KEY is not set or is still the dev default. '
+                'Set a strong random value in your production environment.'
+            )
+
         # Fix Heroku/Render postgres:// -> postgresql://
         uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
         if uri.startswith('postgres://'):
