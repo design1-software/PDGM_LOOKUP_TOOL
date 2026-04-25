@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify, session
 from models.user import db, User
+from app_core.extensions import limiter
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api")
 
 @auth_bp.route('/capture-lead', methods=['POST'])
+@limiter.limit("5 per minute")
 def capture_lead():
     data = request.json or {}
     name = data.get('name', '').strip()

@@ -3,7 +3,7 @@
 import os
 from flask import Flask
 from models.user import db, User
-from .extensions import mail, cache, migrate
+from .extensions import mail, cache, migrate, limiter
 from .config import DevelopmentConfig, ProductionConfig, TestingConfig
 from .errors import register_error_handlers
 
@@ -35,6 +35,7 @@ def create_app(config=None):
     migrate.init_app(app, db)
     mail.init_app(app)
     cache.init_app(app)
+    limiter.init_app(app)
 
     # Create tables
     with app.app_context():
