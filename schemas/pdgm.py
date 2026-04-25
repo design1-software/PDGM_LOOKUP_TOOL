@@ -1,4 +1,5 @@
 # Request/response schemas placeholder (use Marshmallow/Pydantic later if needed)
+import re
 from typing import TypedDict, List, Optional
 
 class PDGMLookupRequest(TypedDict):
@@ -17,24 +18,31 @@ class PDGMLookupResponse(TypedDict):
 class ValidationError(Exception):
     pass
 
-def _ensure_str(v, field):
+_CONTROL_CHARS = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+
+def _ensure_str(v, field, max_length=500):
     if not isinstance(v, str):
         raise ValidationError(f"{field} must be a string")
-    if not v.strip():
+    v = _CONTROL_CHARS.sub('', v).strip()
+    if not v:
         raise ValidationError(f"{field} cannot be empty")
-    return v.strip()
+    if len(v) > max_length:
+        raise ValidationError(f"{field} exceeds maximum length of {max_length} characters")
+    return v
 
-def _ensure_list_str(v, field):
+def _ensure_list_str(v, field, max_items=25):
     if v is None:
         return []
     if not isinstance(v, list) or any(not isinstance(x, str) for x in v):
         raise ValidationError(f"{field} must be a list of strings")
-    return [x.strip() for x in v if isinstance(x, str) and x.strip()]
+    if len(v) > max_items:
+        raise ValidationError(f"{field} cannot contain more than {max_items} entries")
+    return [_CONTROL_CHARS.sub('', x).strip() for x in v if isinstance(x, str) and x.strip()]
 
 def validate_lookup_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError("Body must be a JSON object")
-    q = _ensure_str(payload.get("query", ""), "query")
+    q = _ensure_str(payload.get("query", ""), "query", max_length=500)
     zip_code = payload.get("zip_code", "")
     if isinstance(zip_code, str):
         zip_code = zip_code.strip()
@@ -50,16 +58,16 @@ def validate_lookup_request(payload: dict) -> dict:
 def validate_roadmap_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError("Body must be a JSON object")
-    diagnosis = _ensure_str(payload.get("diagnosis",""), "diagnosis")
-    pdgm_group = _ensure_str(payload.get("pdgm_group",""), "pdgm_group")
+    diagnosis = _ensure_str(payload.get("diagnosis",""), "diagnosis", max_length=200)
+    pdgm_group = _ensure_str(payload.get("pdgm_group",""), "pdgm_group", max_length=100)
     disciplines = _ensure_list_str(payload.get("disciplines"), "disciplines")
     return {"diagnosis": diagnosis, "pdgm_group": pdgm_group, "disciplines": disciplines}
 
 def validate_assessment_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError("Body must be a JSON object")
-    diagnosis = _ensure_str(payload.get("diagnosis",""), "diagnosis")
-    pdgm_group = _ensure_str(payload.get("pdgm_group",""), "pdgm_group")
+    diagnosis = _ensure_str(payload.get("diagnosis",""), "diagnosis", max_length=200)
+    pdgm_group = _ensure_str(payload.get("pdgm_group",""), "pdgm_group", max_length=100)
     return {"diagnosis": diagnosis, "pdgm_group": pdgm_group}
 
 def validate_hipps_request(payload: dict) -> dict:
