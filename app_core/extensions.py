@@ -11,8 +11,10 @@ login_manager = LoginManager()
 mail = Mail()
 cache = Cache()
 migrate = Migrate()
+import os
+_redis_url = os.getenv("REDIS_URL") or os.getenv("REDISCLOUD_URL")
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["100 per minute"],
-    storage_uri="memory://",
+    storage_uri=_redis_url if _redis_url else "memory://",
 )

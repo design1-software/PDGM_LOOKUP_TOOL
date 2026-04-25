@@ -1,5 +1,5 @@
 flask
-flask-limiter>=3.5
+flask-limiter[redis]>=3.5
 flask-sqlalchemy
 flask-migrate
 flask-login==0.6.3
