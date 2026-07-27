@@ -33,7 +33,10 @@ import enhanced_prompt_manager as prompt_manager
 # Configuration
 # ---------------------------------------------------------------------------
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+# claude-sonnet-4-20250514 reached end-of-life on 2026-06-15 and now returns a
+# 404, which broke every AI feature. claude-sonnet-5 is the documented
+# replacement for it and stays in the same cost tier.
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5")
 AI_LOG_PATH = Path(os.getenv("AI_LOG_PATH", "ai_logs.jsonl"))
 
 _root = Path(__file__).resolve().parent
@@ -214,16 +217,29 @@ def is_valid_ai_response(response):
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 
-def _call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 350, temperature: float = 0.1) -> str:
-    """Helper to call Claude API."""
+def _call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
+    """Helper to call Claude API.
+
+    No `temperature`: claude-sonnet-5 rejects non-default sampling parameters
+    with a 400 ("`temperature` is deprecated for this model"). Steer output
+    through the prompt instead.
+
+    Thinking is disabled and effort is low because these are short, structured
+    generations. Thinking is on by default on this model and is billed against
+    the same `max_tokens` as the response, so leaving it on would eat the
+    budget on the smaller calls and truncate the answer.
+    """
     resp = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=max_tokens,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
-        temperature=temperature,
+        thinking={"type": "disabled"},
+        output_config={"effort": "low"},
     )
-    return resp.content[0].text.strip()
+    return "".join(
+        block.text for block in resp.content if block.type == "text"
+    ).strip()
 
 
 def ai_map_phrase_to_code(phrase):
@@ -256,7 +272,7 @@ def ai_map_phrase_to_code(phrase):
     )
 
     try:
-        text = _call_claude(system_prompt, user_prompt, max_tokens=350)
+        text = _call_claude(system_prompt, user_prompt, max_tokens=500)
         valid, mismatches = validate_ai_output(text)
         log_ai_interaction(CLAUDE_MODEL, phrase, text, mismatches)
         return text
@@ -274,10 +290,14 @@ def ai_followup_question(phrase: str) -> str:
         return fallback_response
     try:
         return _call_claude(
-            "You are a medical coding specialist helping refine ICD-10 selection for home health PDGM coding. ALWAYS provide helpful follow-up questions with specific options.",
+            "You are a medical coding specialist helping refine ICD-10 selection for home health PDGM coding. "
+            "ALWAYS provide helpful follow-up questions with specific options. "
+            # Replaces temperature=0.7, which this model rejects: ask for the
+            # variation directly instead of sampling for it.
+            "Vary your phrasing and the angle you ask from across responses rather than "
+            "reusing a standard template.",
             f"Medical term: '{phrase}' - What follow-up questions would help specify this for accurate ICD-10 coding?",
-            max_tokens=120,
-            temperature=0.7,
+            max_tokens=200,
         )
     except Exception:
         pass
@@ -310,7 +330,7 @@ def ai_documentation_roadmap(diagnosis: str, pdgm_group: str, disciplines: list)
     try:
         system_prompt = prompt_manager.build_system_prompt("roadmap", pdgm_group, diagnosis, disciplines)
         user_prompt = f"Diagnosis: {diagnosis}\nPDGM Group: {pdgm_group}\nDisciplines: {', '.join(disciplines)}"
-        return _call_claude(system_prompt, user_prompt, max_tokens=1000)
+        return _call_claude(system_prompt, user_prompt, max_tokens=1400)
     except Exception as e:
         return f"AI error: {e}"
 
@@ -321,6 +341,6 @@ def ai_sample_oasis_assessment(diagnosis: str, pdgm_group: str, disciplines: lis
     try:
         system_prompt = prompt_manager.build_system_prompt("oasis", pdgm_group, diagnosis, disciplines or [])
         user_prompt = f"Diagnosis: {diagnosis}\nPDGM Group: {pdgm_group}"
-        return _call_claude(system_prompt, user_prompt, max_tokens=1000)
+        return _call_claude(system_prompt, user_prompt, max_tokens=1400)
     except Exception as e:
         return f"AI error: {e}"
