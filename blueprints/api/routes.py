@@ -62,9 +62,11 @@ def api_lookup():
         if raw.get('ECOI_FLAG') == '1':
             flags.append({'type': 'warning', 'code': 'ECOI',
                           'message': 'External cause code — cannot be used as principal diagnosis'})
-        if raw.get('PRIMARY_AWARDING_FLAG') == '0' and raw.get('pdgm_clinical_group_code'):
-            flags.append({'type': 'info', 'code': 'NO_PRIMARY_AWARD',
-                          'message': 'This code does not qualify for primary awarding'})
+        # PRIMARY_AWARDING_FLAG is '0' on 74,718 of the 74,719 rows in the CCFTF
+        # mapping (only Z452 is '1'), so a banner keyed on it fired for every
+        # code and told users the opposite of the truth. UNACCEPTABLE_PDX, used
+        # above, is the flag that actually marks codes barred as a principal
+        # diagnosis (1,603 codes).
         if flags:
             payload['flags'] = flags
 
