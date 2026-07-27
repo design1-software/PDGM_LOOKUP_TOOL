@@ -60,8 +60,30 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def anon_client(app):
+    """A client that has NOT completed the lead-capture gate.
+
+    Use this to assert the gate itself behaves; every other test wants
+    ``client``.
+    """
     return app.test_client()
+
+
+@pytest.fixture
+def client(app):
+    """A client past the lead-capture gate.
+
+    Most API routes are wrapped in @require_lead_capture, which 403s unless
+    ``lead_captured`` is in the session. Without this the endpoint tests only
+    ever exercised the gate and never reached the handlers they were written
+    to cover.
+    """
+    test_client = app.test_client()
+    with test_client.session_transaction() as sess:
+        sess['lead_captured'] = True
+        sess['lead_email'] = 'test@example.com'
+        sess['lead_name'] = 'Test User'
+    return test_client
 
 
 @pytest.fixture
