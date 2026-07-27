@@ -69,7 +69,6 @@ def index():
                 f"Description: {row.get('description','')}",
                 f"PDGM Group: {format_pdgm_group(row.get('pdgm_clinical_group_name',''))}",
                 f"Comorbidity Group: {row.get('COMORBIDITY_GROUP','')}",
-                f"Primary Awarding: {row.get('PRIMARY_AWARDING_FLAG','')}",
                 f"Code First: {row.get('CODE_FIRST','')}",
                 f"Billable: {'No (Section 111 Excluded)' if excluded else 'Yes'}",
             ]
