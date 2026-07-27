@@ -53,7 +53,17 @@ def validate_lookup_request(payload: dict) -> dict:
         visit_count = int(visit_count) if visit_count else None
     except (ValueError, TypeError):
         visit_count = None
-    return {"query": q, "zip_code": zip_code, "visit_count": visit_count}
+    area_code = payload.get("area_code", "")
+    if isinstance(area_code, str):
+        area_code = area_code.strip()
+    else:
+        area_code = ""
+    return {
+        "query": q,
+        "zip_code": zip_code,
+        "visit_count": visit_count,
+        "area_code": area_code,
+    }
 
 def validate_roadmap_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
@@ -100,6 +110,14 @@ def validate_hipps_request(payload: dict) -> dict:
         zip_code = zip_code.strip()
     else:
         zip_code = ""
+    # CMS keys the HH PPS wage index on CBSA, not ZIP, and publishes no
+    # ZIP-to-CBSA mapping in the rate files. area_code is a CBSA, statewide
+    # rural (999xx) or transition (50xxx) code from the CMS wage index file.
+    area_code = payload.get("area_code", "")
+    if isinstance(area_code, str):
+        area_code = area_code.strip()
+    else:
+        area_code = ""
     return {
         "primary_icd10": primary_icd10,
         "secondary_icd10s": secondary_icd10s,
@@ -108,4 +126,5 @@ def validate_hipps_request(payload: dict) -> dict:
         "gg0130": gg0130,
         "gg0170": gg0170,
         "zip_code": zip_code,
+        "area_code": area_code,
     }

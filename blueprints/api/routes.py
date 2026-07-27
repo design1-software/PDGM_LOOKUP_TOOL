@@ -39,7 +39,10 @@ def api_lookup():
         v = validate_lookup_request(body)
         query = v['query']
         zip_code = v.get('zip_code', '')
-        visit_count = v.get('visit_count')
+        area_code = v.get('area_code', '')
+        # visit_count is still accepted by the schema but unused here: LUPA
+        # status depends on the HIPPS group's threshold, which this route
+        # cannot determine. POST /api/hipps handles that.
 
         from services.pdgm.rules_engine import lookup_pdgm
         payload = lookup_pdgm(query)
@@ -65,16 +68,23 @@ def api_lookup():
         if flags:
             payload['flags'] = flags
 
-        # Append payment estimate if zip_code or visit_count provided
-        if zip_code or visit_count is not None:
-            from services.reimbursement_service import ReimbursementService, extract_pdgm_code_from_response
-            pdgm_code = (payload.get('raw') or {}).get('pdgm_clinical_group_code', '')
-            if not pdgm_code:
-                pdgm_code = (payload.get('raw') or {}).get('pdgm_clinical_group_name', '')
-            if pdgm_code:
-                service = ReimbursementService()
-                payment = service.calculate_payment(pdgm_code, zip_code, visit_count)
-                payload['payment'] = payment
+        # Payment range when an area is supplied. A diagnosis fixes the clinical
+        # group but not the functional level, admission source/timing, or
+        # comorbidity adjustment, so an exact payment isn't knowable here --
+        # POST /api/hipps takes those inputs and returns a single figure.
+        if area_code:
+            from services.reimbursement_service import ReimbursementService
+            group_code = (payload.get('raw') or {}).get('pdgm_clinical_group_code', '')
+            if group_code:
+                payload['payment_range'] = ReimbursementService().payment_range(
+                    group_code, area_code
+                )
+        elif zip_code:
+            payload['payment_note'] = (
+                'area_code is required for a wage-adjusted estimate. CMS keys '
+                'the HH PPS wage index on CBSA, not ZIP. See '
+                'GET /api/wage-index-areas.'
+            )
 
         return jsonify(payload)
     except ValidationError as ve:
@@ -172,9 +182,20 @@ def api_hipps():
             comorbidity_adjustment=comorbidity_adj,
         )
 
-        # Decode and calculate payment
+        # Decode and calculate payment. A bare ZIP cannot be resolved to a wage
+        # index -- CMS keys it on CBSA -- so ask for area_code rather than guess.
         breakdown = decode_hipps(hipps_code)
-        payment = calculate_payment(hipps_code, v['zip_code'])
+        if not v['area_code'] and v['zip_code']:
+            return jsonify({
+                'error': 'area_code is required for a wage-adjusted payment. '
+                         'CMS keys the HH PPS wage index on CBSA, not ZIP, and '
+                         'publishes no ZIP-to-CBSA mapping in the rate files. '
+                         'Pass a CBSA, statewide rural (999xx) or transition '
+                         '(50xxx) code from GET /api/wage-index-areas.',
+                'hipps_code': hipps_code,
+                'dimensions': breakdown,
+            }), 400
+        payment = calculate_payment(hipps_code, v['area_code'])
 
         return jsonify({
             'hipps_code': hipps_code,
@@ -202,9 +223,39 @@ def api_hipps():
 
 @bp.get('/api/case-mix-weights')
 def api_case_mix_weights():
-    """Expose all HIPPS case-mix weights for client-side impact calculations."""
-    from services.pdgm.hipps import CASE_MIX_WEIGHTS, NATIONAL_30DAY_RATE
-    return jsonify(weights=CASE_MIX_WEIGHTS, national_rate=NATIONAL_30DAY_RATE)
+    """Expose all 432 CY 2026 CMS case-mix weights and LUPA thresholds.
+
+    Keyed by real HIPPS code (e.g. 1KC11). Source: CY 2026 HH PPS final rule,
+    see data/cms/cy2026/SOURCES.md.
+    """
+    from services import cms_data
+    from services.reimbursement_service import (
+        NATIONAL_30_DAY_RATE, NATIONAL_30_DAY_RATE_NO_QUALITY, PAYMENT_YEAR,
+    )
+    table = cms_data.load_case_mix_table()
+    return jsonify(
+        weights={cell['hipps']: cell['weight'] for cell in table.values()},
+        lupa_thresholds={cell['hipps']: cell['lupa_threshold'] for cell in table.values()},
+        national_rate=NATIONAL_30_DAY_RATE,
+        national_rate_no_quality_data=NATIONAL_30_DAY_RATE_NO_QUALITY,
+        payment_year=PAYMENT_YEAR,
+    )
+
+
+@bp.get('/api/wage-index-areas')
+def api_wage_index_areas():
+    """List the CY 2026 CMS wage index areas accepted as area_code."""
+    from services import cms_data
+    return jsonify(areas=[
+        {
+            'code': area['code'],
+            'name': area['name'],
+            'wage_index': area['wage_index'],
+            'kind': area['kind'],
+            'states': area['states'],
+        }
+        for area in cms_data.list_areas()
+    ])
 
 
 @bp.post('/api/comorbidity-check')
@@ -237,18 +288,40 @@ def api_compare():
         body = request.get_json(silent=True) or {}
         code_a = body.get('code_a', '')
         code_b = body.get('code_b', '')
-        from app import normalize_icd10, icd10_data
-        from services.pdgm.hipps import CASE_MIX_WEIGHTS, NATIONAL_30DAY_RATE
+        from app import normalize_icd10
+        from services import cms_data
+        from services.reimbursement_service import NATIONAL_30_DAY_RATE
+
+        area_code = (body.get('area_code') or '').strip()
+        table = cms_data.load_case_mix_table()
 
         def build_info(code_str):
             from services.pdgm.rules_engine import explain_pdgm_for_icd10
             info = explain_pdgm_for_icd10(normalize_icd10(code_str))
             raw = info.get('raw') or {}
             cg = raw.get('pdgm_clinical_group_code', '')
-            weights = [CASE_MIX_WEIGHTS[k] for k in CASE_MIX_WEIGHTS if k.startswith(cg)] if cg else []
+            if not cg:
+                info['payment_range'] = None
+                return info
+            if area_code:
+                # Wage-adjusted range for a specific area.
+                from services.reimbursement_service import ReimbursementService
+                rng = ReimbursementService().payment_range(cg, area_code)
+                info['payment_range'] = None if rng.get('error') else {
+                    'min': rng['min_payment'],
+                    'max': rng['max_payment'],
+                    'area_name': rng['area_name'],
+                    'wage_index': rng['wage_index'],
+                }
+                return info
+            # No area given: unadjusted national range, clearly labelled.
+            weights = [c['weight'] for k, c in table.items() if k[0] == cg]
             info['payment_range'] = {
-                'min': round(min(weights) * NATIONAL_30DAY_RATE, 2),
-                'max': round(max(weights) * NATIONAL_30DAY_RATE, 2),
+                'min': round(min(weights) * NATIONAL_30_DAY_RATE, 2),
+                'max': round(max(weights) * NATIONAL_30_DAY_RATE, 2),
+                'wage_adjusted': False,
+                'note': 'National rates, not wage-adjusted. Pass area_code for '
+                        'a geography-specific range.',
             } if weights else None
             return info
 
