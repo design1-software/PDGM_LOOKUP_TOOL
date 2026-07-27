@@ -663,7 +663,9 @@
                     <div class="section-content">
                         <div class="detail-row">
                             <span class="detail-label">Payment Range:</span>
-                            <span class="detail-value highlight-value">${money(range.min_payment)} &ndash; ${money(range.max_payment)}</span>
+                            <!-- data-animated opts out of the counter animation in
+                                 animations.js, which can only animate a single amount. -->
+                            <span class="detail-value highlight-value" data-animated="1">${money(range.min_payment)} &ndash; ${money(range.max_payment)}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Clinical Group:</span>
