@@ -158,7 +158,9 @@
             episode_timing: parseInt(document.querySelector('input[name="episode_timing"]:checked')?.value || '1', 10),
             gg0130: collectGGScores('gg0130'),
             gg0170: collectGGScores('gg0170'),
-            zip_code: document.getElementById('zip-input')?.value || '',
+            // CMS keys the wage index on CBSA, not ZIP. area-code is the
+            // selector populated from GET /api/wage-index-areas.
+            area_code: document.getElementById('area-code')?.value || '',
         };
 
         fetch('/api/hipps', {

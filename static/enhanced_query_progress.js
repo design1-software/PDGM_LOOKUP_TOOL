@@ -213,8 +213,7 @@ class PDGMQueryProgress {
             },
             body: JSON.stringify({
                 query: formData.get('query') || formData.get('diagnosis') || '',
-                zip_code: formData.get('zip_code') || '',
-                visit_count: formData.get('visit_count') || ''
+                area_code: formData.get('area_code') || ''
             }),
             signal: controller.signal
         });

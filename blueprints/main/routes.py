@@ -7,9 +7,11 @@ from app import (
     icd10_data, excluded_codes,
     ai_map_phrase_to_code, ai_followup_question,
 )
+from services import cms_data
 from services.reimbursement_service import (
     ReimbursementService,
     ai_map_phrase_to_code_with_payment,
+    format_payment_range_lines,
 )
 from app_core.extensions import cache
 import uuid
@@ -35,8 +37,7 @@ def get_cached_ai_response(query):
 def index():
     result = None
     query = ""
-    zip_code = ""
-    visit_count_input = None
+    area_code = ""
 
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
@@ -46,12 +47,7 @@ def index():
 
         follow_answer = request.form.get("follow_answer", "").strip()
         full_query = f"{query} {follow_answer}" if follow_answer else query
-        zip_code = request.form.get('zip_code', '').strip()
-        visit_count_input = request.form.get('visit_count')
-        try:
-            visit_count_input = int(visit_count_input) if visit_count_input else None
-        except ValueError:
-            visit_count_input = None
+        area_code = request.form.get('area_code', '').strip()
 
         icd_code = normalize_icd10(full_query)
         row = get_cached_icd10_data(icd_code)
@@ -82,36 +78,21 @@ def index():
             if unspecified_pdx:
                 lines.append("Unspecified PDx: Yes - A more specific code should be used when possible")
             text_result = "\n".join(lines)
-            if zip_code or visit_count_input is not None:
-                service = ReimbursementService()
-                pay = service.calculate_payment(
-                    row.get('pdgm_clinical_group_code', ''),
-                    zip_code,
-                    visit_count_input,
+            # A diagnosis fixes the clinical group but not the functional level,
+            # admission source/timing or comorbidity adjustment, so show the
+            # bounded range rather than inventing the missing dimensions.
+            if area_code:
+                rng = ReimbursementService().payment_range(
+                    row.get('pdgm_clinical_group_code', ''), area_code
                 )
-                if pay.get('estimated_payment'):
-                    pay_lines = [
-                        "",
-                        "ESTIMATED REIMBURSEMENT:",
-                        f"Payment Amount: ${pay['estimated_payment']:,.2f}",
-                        f"Base Rate: ${pay['base_rate']:,.2f}",
-                        f"PDGM Multiplier: {pay['pdgm_multiplier']}",
-                        f"Wage Index: {pay['wage_index']:.3f}",
-                    ]
-                    if pay['is_lupa']:
-                        pay_lines.append(
-                            f"LUPA Alert: Visit count ({visit_count_input}) below threshold ({pay['lupa_threshold']})"
-                        )
-                    pay_lines.append("")
-                    pay_lines.append(pay['disclaimer'])
-                    text_result += "\n" + "\n".join(pay_lines)
+                range_lines = format_payment_range_lines(rng)
+                if range_lines:
+                    text_result += "\n" + "\n".join(range_lines)
             follow_up = ai_followup_question(full_query)
             result = {'Text': text_result, 'FollowUp': follow_up}
         else:
             ai_func = lambda _: get_cached_ai_response(full_query)
-            ai_response = ai_map_phrase_to_code_with_payment(
-                ai_func, full_query, zip_code, visit_count_input
-            )
+            ai_response = ai_map_phrase_to_code_with_payment(ai_func, full_query)
             follow_up = ai_followup_question(full_query)
             result = {'AI': ai_response, 'FollowUp': follow_up}
 
@@ -119,8 +100,8 @@ def index():
         'index.html',
         result=result,
         query=query,
-        zip_code=zip_code,
-        visit_count_value=visit_count_input,
+        area_code=area_code,
+        payment_areas=cms_data.list_areas(),
         lead_captured=session.get('lead_captured', False),
         lead_email=session.get('lead_email', ''),
     )

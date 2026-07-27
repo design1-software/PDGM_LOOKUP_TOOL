@@ -193,15 +193,28 @@
                     </div>
                 </div>
 
-                <!-- ZIP Code & Visit Count (Optional) -->
+                <!-- CY 2026 payment range (optional).
+                     CMS keys the wage index on CBSA, not ZIP, and publishes no
+                     ZIP-to-CBSA mapping in the rate files, so the user picks an
+                     area directly. A diagnosis fixes the clinical group only, so
+                     this yields a range; the HIPPS calculator gives an exact
+                     figure once functional level and timing are known. -->
                 <details class="zip-details">
-                    <summary class="zip-summary">⚙️ Optional: Add ZIP code for payment estimates</summary>
+                    <summary class="zip-summary">⚙️ Optional: Estimate CY 2026 reimbursement range</summary>
                     <div class="zip-content">
-                        <input type="text" id="zip-input" name="zip_code" class="zip-input"
-                            placeholder="Enter ZIP code (e.g., 90210)" pattern="[0-9]{5}(-[0-9]{4})?"
-                            title="Please enter a valid ZIP code">
-                        <input type="number" id="visit-count-input" name="visit_count" class="visit-input" min="1"
-                            placeholder="Visit count for LUPA alert">
+                        <label for="area-code">Site of service</label>
+                        <select id="area-code" name="area_code" class="zip-input">
+                            <option value="">Select a CBSA or statewide rural area…</option>
+                            {% for state, areas in payment_areas | groupby('states.0') %}
+                            <optgroup label="{{ state }}">
+                                {% for area in areas %}
+                                <option value="{{ area.code }}" {% if area_code == area.code %}selected{% endif %}>
+                                    {{ area.name }} (WI {{ '%.4f' | format(area.wage_index) }})
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
                     </div>
                 </details>
 
@@ -534,7 +547,7 @@
         }
 
         // Submit query to backend
-        async function submitQuery(diagnosis, zipCode = '', visitCount = '') {
+        async function submitQuery(diagnosis, areaCode = '') {
             const resultsSection = document.getElementById('results');
             const loading = document.getElementById('loading');
             const responseContent = document.getElementById('response-content');
@@ -560,8 +573,7 @@
                     },
                     body: JSON.stringify({
                         query: diagnosis,
-                        zip_code: zipCode,
-                        visit_count: visitCount
+                        area_code: areaCode || document.getElementById('area-code')?.value || ''
                     })
                 });
 
