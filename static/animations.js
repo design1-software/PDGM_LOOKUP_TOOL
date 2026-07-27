@@ -242,14 +242,24 @@
             const paymentValues = responseContent.querySelectorAll('.highlight-value');
             paymentValues.forEach(function (el) {
                 if (el.dataset.animated) return;
-                const text = el.textContent;
-                if (text.startsWith('$')) {
-                    el.dataset.animated = '1';
-                    const target = parseFloat(text.replace(/[^0-9.]/g, ''));
-                    if (!isNaN(target)) {
-                        animateCounter(el, target, '$', '', 800);
-                    }
-                }
+                const text = el.textContent.trim();
+                if (!text.startsWith('$')) return;
+
+                // Animate a single amount only. Stripping non-numerics from a
+                // range like "$1,378.61 - $2,757.05" yields "1378.612757.05",
+                // which parseFloat truncates at the second decimal point -- so
+                // the whole range was being replaced by one number.
+                if ((text.match(/\$/g) || []).length > 1) return;
+
+                // Require exactly one well-formed currency amount, so any
+                // future multi-value format cannot regress into the same bug.
+                if (!/^\$[\d,]+(\.\d+)?$/.test(text)) return;
+
+                const target = parseFloat(text.replace(/[$,]/g, ''));
+                if (isNaN(target)) return;
+
+                el.dataset.animated = '1';
+                animateCounter(el, target, '$', '', 800);
             });
         });
         payObserver.observe(responseContent, { childList: true, subtree: true });
