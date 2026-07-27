@@ -1,6 +1,6 @@
 # PDGM Lookup Tool
 
-A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-Driven Groupings Model) clinical groups for Medicare home health reimbursement. Combines a 74,000+ row authoritative CSV dataset with OpenAI-powered intelligent fallback to deliver compliant, accurate results in real time.
+A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-Driven Groupings Model) clinical groups for Medicare home health reimbursement. Combines a 74,000+ row authoritative CSV dataset with Claude-powered intelligent fallback to deliver compliant, accurate results in real time. Payment estimates are computed from the CY 2026 CMS Home Health PPS final rule.
 
 ---
 
@@ -9,14 +9,19 @@ A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-
 ### 1. PDGM Code Lookup
 - Enter an ICD-10 code (e.g., `I10`) or a clinical phrase (e.g., "congestive heart failure")
 - **Direct CSV match**: instant lookup against the official PDGM diagnosis mapping
-- **AI fallback**: when no exact code match is found, OpenAI maps the phrase to the best candidate code(s) from the CSV, validated before returning
-- Returns: clinical group, comorbidity group, primary awarding flag, code-first sequencing, billable status, and a clinical rationale
+- **AI fallback**: when no exact code match is found, Claude maps the phrase to the best candidate code(s) from the CSV, validated before returning
+- Returns: clinical group, comorbidity group, code-first sequencing, billable status, and a clinical rationale
 
-### 2. Reimbursement Estimation
-- Provide an optional ZIP code and visit count alongside any lookup
-- Calculates estimated Medicare payment using the $1,901.12 national base rate, PDGM case-mix multipliers (A-L), and state-level wage index adjustments
-- Detects Low-Utilization Payment Arrangement (LUPA) when visit counts fall below thresholds and recalculates to per-visit rates
-- Includes late-episode timing adjustment (5% reduction)
+### 2. Reimbursement Estimation (CY 2026)
+All figures come from the CY 2026 CMS Home Health PPS final rule (CMS-1828-F) and CR 14304, read at runtime from `data/cms/cy2026/`. Nothing is estimated — see [data/cms/cy2026/SOURCES.md](data/cms/cy2026/SOURCES.md) for provenance and the CY 2027 refresh procedure.
+
+- **Payment range** on any lookup: pick a site of service and get the floor and ceiling for that diagnosis's clinical group. A diagnosis fixes the clinical group but not the functional level, admission source and timing, or comorbidity adjustment, so a single figure is not knowable from a code alone — the range spans all 36 combinations.
+- **Exact payment** via `POST /api/hipps`: supply GG0130/GG0170 functional items, admission source, and episode timing, and the tool derives the real HIPPS code (e.g. `1KC11`), its CMS case-mix weight, and its LUPA threshold.
+- **Geography**: 489 CMS wage index areas (417 urban CBSAs, 51 statewide rural, 21 transition codes), wage index 0.2719–1.8317. CMS keys the wage index on CBSA, not ZIP, and publishes no ZIP-to-CBSA mapping in the rate files, so the tool takes an `area_code` rather than guessing from a ZIP.
+- **Payment math** follows 90 FR 55405: case-mix adjust the $2,038.22 national 30-day rate, split labor (74.9%) and non-labor (25.1%), wage-adjust the labor portion, recombine.
+- **LUPA**: per-HIPPS thresholds (2–5 visits, varies by group), per-visit rates by discipline, and the CY 2025-onward add-on factors.
+
+Not implemented: outlier payments, partial-period adjustments, dNPWT, and HHVBP adjustments.
 
 ### 3. Recertification Calculator
 - Input a Start of Care (SOC) date and episode length (default 60 days)
@@ -35,7 +40,7 @@ A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-
 
 ### Prerequisites
 - Python 3.11+
-- An OpenAI API key (for AI features; CSV lookups work without it)
+- An Anthropic API key (for AI features; CSV lookups and payment estimates work without it)
 
 ### Local Development
 
@@ -52,7 +57,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Set environment variables
-export OPENAI_API_KEY="sk-your-key-here"    # optional for AI features
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"   # optional for AI features
 export FLASK_SECRET_KEY="change-me"
 
 # Run
@@ -65,10 +70,10 @@ The app starts at `http://127.0.0.1:5000` with a SQLite database (`pdgm_dev.db`)
 
 ```bash
 pip install pytest
-OPENAI_API_KEY=test pytest tests/ -v
+pytest tests/ -q
 ```
 
-All 17 tests pass in ~1.5 seconds using in-memory SQLite and stubbed OpenAI.
+All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic client (see `tests/conftest.py`) — no API key needed.
 
 ---
 
@@ -76,11 +81,11 @@ All 17 tests pass in ~1.5 seconds using in-memory SQLite and stubbed OpenAI.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | For AI features | - | OpenAI API key |
+| `ANTHROPIC_API_KEY` | For AI features | - | Anthropic API key |
 | `FLASK_SECRET_KEY` | Production | `dev-secret-change-me` | Session signing key |
 | `DATABASE_URL` | Production | `sqlite:///pdgm_dev.db` | PostgreSQL connection string |
-| `OPENAI_MODEL` | No | `gpt-4-turbo` | Primary OpenAI model |
-| `FALLBACK_MODEL` | No | `gpt-4` | Fallback model when primary fails validation |
+| `CLAUDE_MODEL` | No | `claude-sonnet-5` | Claude model ID. Set to `claude-opus-5` to trade cost for capability. |
+| `AI_LOG_PATH` | No | `./ai_logs.jsonl` | Where AI interactions are logged |
 | `MAIL_SERVER` | For email | `smtp.gmail.com` | SMTP server |
 | `MAIL_PORT` | For email | `587` | SMTP port |
 | `MAIL_USE_TLS` | For email | `True` | Enable TLS |
@@ -104,9 +109,23 @@ All 17 tests pass in ~1.5 seconds using in-memory SQLite and stubbed OpenAI.
 
 | Endpoint | Method | Body | Description |
 |----------|--------|------|-------------|
-| `/api/lookup` | POST | `{"query": "I10"}` | Lookup by ICD-10 code or clinical phrase |
+| `/api/lookup` | POST | `{"query": "I10", "area_code": "26300"}` | Lookup by ICD-10 code or clinical phrase. With `area_code`, also returns `payment_range`. |
+| `/api/hipps` | POST | `{"primary_icd10": "...", "secondary_icd10s": [], "admission_source": 1, "episode_timing": 1, "gg0130": {}, "gg0170": {}, "area_code": "..."}` | Derive the real HIPPS code and its exact CY 2026 payment |
+| `/api/compare` | POST | `{"code_a": "...", "code_b": "...", "area_code": "..."}` | Side-by-side diagnosis comparison |
+| `/api/comorbidity-check` | POST | `{"primary_icd10": "...", "secondary_icd10s": [...]}` | Comorbidity adjustment without a full HIPPS calculation |
 | `/api/roadmap` | POST | `{"diagnosis": "...", "pdgm_group": "...", "disciplines": ["SN"]}` | Generate documentation roadmap |
 | `/api/assessment` | POST | `{"diagnosis": "...", "pdgm_group": "..."}` | Generate sample OASIS assessment |
+
+### CMS Reference Data
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/wage-index-areas` | GET | All 489 CY 2026 wage index areas — the valid values for `area_code` |
+| `/api/case-mix-weights` | GET | All 432 CMS case-mix weights and LUPA thresholds, keyed by HIPPS code |
+
+> **`area_code`, not ZIP.** CMS keys the HH PPS wage index on CBSA and publishes no ZIP-to-CBSA mapping in the rate files, so these endpoints take a CBSA, statewide rural (`999xx`), or transition (`50xxx`) code. Passing a bare `zip_code` to `/api/hipps` returns a 400 explaining this rather than guessing.
+
+> Most `/api/*` endpoints are behind the lead-capture gate and return 403 until the session has completed it. `/healthz` and `/version` are not gated.
 
 ### Web UI
 
@@ -169,7 +188,7 @@ The included Dockerfile is platform-agnostic and works with any container hostin
 ```bash
 docker build -t pdgm-lookup .
 docker run -p 8080:8080 \
-  -e OPENAI_API_KEY=sk-your-key \
+  -e ANTHROPIC_API_KEY=sk-ant-your-key \
   -e FLASK_SECRET_KEY=your-secret \
   -e DATABASE_URL=postgresql://user:pass@host/db \
   -e PORT=8080 \
@@ -187,7 +206,7 @@ pip install -r requirements.txt
 gunicorn wsgi:app --bind 0.0.0.0:8080 --workers 2 --threads 2
 ```
 
-Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK_SECRET_KEY`) on your hosting platform.
+Set the required environment variables (`ANTHROPIC_API_KEY`, `DATABASE_URL`, `FLASK_SECRET_KEY`) on your hosting platform.
 
 ---
 
@@ -202,7 +221,7 @@ Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK
 | `description` | `Essential (primary) hypertension` | Clinical description |
 | `pdgm_clinical_group_code` | `H` | Single-letter group code (A-L, or NA) |
 | `pdgm_clinical_group_name` | `MMTA_CARDIAC` | Full PDGM group name |
-| `PRIMARY_AWARDING_FLAG` | `0` | Can be primary diagnosis (0/1) |
+| `PRIMARY_AWARDING_FLAG` | `0` | Present in the source data but not a usable signal — `0` on 74,718 of the 74,719 rows. Use `UNACCEPTABLE_PDX` for principal-diagnosis eligibility. |
 | `COMORBIDITY_GROUP` | `No_group` | Comorbidity classification |
 | `CODE_FIRST` | `0` | Must be sequenced first (0/1) |
 | `SUBCHAPTER` | `I10-I16` | ICD-10 subchapter range |
@@ -214,20 +233,38 @@ Set the required environment variables (`OPENAI_API_KEY`, `DATABASE_URL`, `FLASK
 
 ### PDGM Clinical Groups
 
-| Code | Group Name | Multiplier | Description |
-|------|-----------|------------|-------------|
-| A | MMTA_OTHER | 1.00 | Medical management, other |
-| B | NEURO_REHAB | 1.05 | Neurological rehabilitation |
-| C | WOUND | 0.98 | Wound care |
-| D | COMPLEX | 1.10 | Complex nursing / acute care |
-| E | MS_REHAB | 1.02 | Musculoskeletal rehabilitation |
-| F | BEHAVE_HEALTH | 0.97 | Behavioral health |
-| G | MMTA_AFTER | 1.00 | Post-surgical MMTA |
-| H | MMTA_CARDIAC | 1.03 | Cardiac MMTA |
-| I | MMTA_ENDO | 1.00 | Endocrine MMTA |
-| J | MMTA_GI_GU | 1.01 | GI/GU MMTA |
-| K | MMTA_INFECT | 0.95 | Infectious disease MMTA |
-| L | MMTA_RESP | 1.04 | Respiratory MMTA |
+There is no single multiplier per clinical group. Each group's case-mix weight
+depends on the full HIPPS combination — functional level, admission source and
+timing, and comorbidity adjustment — so each spans a range of 36 CMS weights.
+The letter is HIPPS position 2.
+
+| Code | Group Name | CY 2026 weight range | LUPA thresholds | Description |
+|------|-----------|----------------------|-----------------|-------------|
+| A | MMTA_OTHER | 0.5823 – 1.5053 | 2, 3, 4 | Medical management, other |
+| B | NEURO_REHAB | 0.6986 – 1.6798 | 2, 3, 4, 5 | Neurological rehabilitation |
+| C | WOUND | 1.0048 – 1.9558 | 3, 4, 5 | Wound care |
+| D | COMPLEX | 0.5624 – 1.4406 | 2, 3 | Complex nursing / acute care |
+| E | MS_REHAB | 0.6081 – 1.5632 | 2, 3, 4, 5 | Musculoskeletal rehabilitation |
+| F | BEHAVE_HEALTH | 0.5364 – 1.4837 | 2, 3, 4 | Behavioral health |
+| G | MMTA_AFTER | 0.5738 – 1.5513 | 2, 3, 4 | Post-surgical MMTA |
+| H | MMTA_CARDIAC | 0.5647 – 1.5053 | 2, 3, 4 | Cardiac MMTA |
+| I | MMTA_ENDO | 0.8597 – 1.7193 | 3, 4, 5 | Endocrine MMTA |
+| J | MMTA_GI_GU | 0.5587 – 1.5053 | 2, 3, 4 | GI/GU MMTA |
+| K | MMTA_INFECT | 0.5828 – 1.5578 | 2, 3 | Infectious disease MMTA |
+| L | MMTA_RESP | 0.5742 – 1.5166 | 2, 3, 4 | Respiratory MMTA |
+
+Query `GET /api/case-mix-weights` for all 432 weights and thresholds keyed by HIPPS code.
+
+### CY 2026 CMS Rate Data
+`data/cms/cy2026/` — the CMS source files behind every payment figure, with full provenance in [SOURCES.md](data/cms/cy2026/SOURCES.md):
+
+| File | Contents |
+|------|----------|
+| `case_mix_weights_lupa.csv` | All 432 HIPPS case-mix weights and LUPA thresholds |
+| `wage_index.csv` | 489 wage index areas (urban CBSA, statewide rural, transition codes) |
+| `comorbidity_interactions.xlsx` | Low/high comorbidity adjustment interactions |
+
+Rate constants (the $2,038.22 national 30-day rate, per-visit amounts, LUPA add-on factors) are transcribed into `services/reimbursement_service.py` with inline citations to CR 14304 and 90 FR 55405.
 
 ### Section 111 Exclusions
 `section111_excluded_icd10_fy2026.xlsx` — FY2026 codes excluded from primary diagnosis selection per CMS Section 111 reporting requirements. Downloaded from [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists).
@@ -247,7 +284,7 @@ CMS updates PDGM groupings annually (October, with mid-year updates in January/A
 |-------|-----------|
 | Framework | Flask 2.x with Blueprints |
 | Database | SQLite (dev) / PostgreSQL (prod) via SQLAlchemy |
-| AI | OpenAI API (gpt-4-turbo with gpt-4 fallback) |
+| AI | Anthropic Claude API (`claude-sonnet-5`) |
 | Auth | Flask-Login |
 | Caching | Flask-Caching (SimpleCache) |
 | Email | Flask-Mail (SMTP) |
@@ -281,8 +318,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 │   ├── user.py                     # User model (email, password)
 │   └── oasis.py                    # OASIS-E assessment models
 ├── services/
-│   ├── reimbursement_service.py    # Payment calculations
+│   ├── cms_data.py                 # Loaders for the CY 2026 CMS source files
+│   ├── reimbursement_service.py    # CY 2026 payment calculations
 │   └── pdgm/
+│       ├── hipps.py                # HIPPS generation + CMS case-mix lookup
+│       ├── comorbidity.py          # Comorbidity adjustment
+│       ├── functional.py           # GG0130/GG0170 functional scoring
 │       ├── impl.py                 # CSV loading, normalization, parsing
 │       ├── repository.py           # Data access layer
 │       └── rules_engine.py         # Lookup orchestration
@@ -292,9 +333,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 ├── prompts/                        # Prompt template files
 ├── templates/                      # Jinja2 HTML templates
 ├── static/                         # CSS, JS, icons
-├── tests/                          # 17 pytest tests
+├── tests/                          # 55 pytest tests
+├── data/cms/cy2026/                # CMS CY 2026 rate data + SOURCES.md
 ├── CCFTF_pdgm_diagnosis_mapping.csv   # 74K ICD-10 to PDGM mappings
-├── section111excludedicd10-jan2025_0.xlsx  # Exclusion list
+├── section111_excluded_icd10_fy2026.xlsx   # Section 111 exclusion list
 ├── requirements.txt                # Python dependencies (15 packages)
 ├── Dockerfile                      # Production container
 └── ARCHITECTURE.md                 # Architecture documentation
