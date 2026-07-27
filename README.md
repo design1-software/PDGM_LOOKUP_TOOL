@@ -83,7 +83,7 @@ All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic c
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | For AI features | - | Anthropic API key |
 | `FLASK_SECRET_KEY` | Production | `dev-secret-change-me` | Session signing key |
-| `DATABASE_URL` | Production | `sqlite:///pdgm_dev.db` | PostgreSQL connection string |
+| `DATABASE_URL` | Production | `sqlite:///pdgm.db` | PostgreSQL connection string. **If unset, production falls back to a SQLite file inside the container, which is wiped on every deploy** — the only thing stored is lead-capture records. |
 | `CLAUDE_MODEL` | No | `claude-sonnet-5` | Claude model ID. Set to `claude-opus-5` to trade cost for capability. |
 | `AI_LOG_PATH` | No | `./ai_logs.jsonl` | Where AI interactions are logged |
 | `MAIL_SERVER` | For email | `smtp.gmail.com` | SMTP server |
@@ -136,13 +136,13 @@ All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic c
 | `/recert/ics` | GET | Download `.ics` calendar event |
 | `/recert/email` | POST | Send recert reminder email |
 
-### Authentication
+### Lead Capture
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/auth/login` | GET/POST | User login |
-| `/auth/register` | GET/POST | User registration |
-| `/auth/logout` | GET | Logout |
+| Endpoint | Method | Body | Description |
+|----------|--------|------|-------------|
+| `/api/capture-lead` | POST | `{"name": "...", "email": "..."}` | Records the visitor and unlocks the gated `/api/*` endpoints for the session |
+
+There is no login/registration flow. Access is gated by the lead-capture form only — submitting it stores a `User` row and sets `lead_captured` in the session.
 
 ---
 
