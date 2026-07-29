@@ -1482,3 +1482,13 @@ select.zip-input optgroup {
 .hipps-field { position: relative; }
 .hipps-field:hover .gg-tooltip { opacity: 1; }
 
+
+/* HIPPS calculator: site-of-service selector */
+.hipps-area { margin: 1rem 0 0.75rem; }
+.hipps-area-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+}

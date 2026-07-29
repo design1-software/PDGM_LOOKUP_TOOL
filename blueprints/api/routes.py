@@ -184,20 +184,33 @@ def api_hipps():
             comorbidity_adjustment=comorbidity_adj,
         )
 
-        # Decode and calculate payment. A bare ZIP cannot be resolved to a wage
-        # index -- CMS keys it on CBSA -- so ask for area_code rather than guess.
+        # The HIPPS code and its dimensions never depend on geography, so they
+        # are always returned. Payment does: CMS keys the wage index on CBSA
+        # and publishes no ZIP-to-CBSA mapping, so without an area_code there
+        # is no defensible payment figure.
+        #
+        # `payment` is either a complete payment object or null -- never a
+        # half-populated error shape. Returning the error shape is what
+        # crashed the client while it formatted fields that weren't there.
         breakdown = decode_hipps(hipps_code)
-        if not v['area_code'] and v['zip_code']:
-            return jsonify({
-                'error': 'area_code is required for a wage-adjusted payment. '
-                         'CMS keys the HH PPS wage index on CBSA, not ZIP, and '
-                         'publishes no ZIP-to-CBSA mapping in the rate files. '
-                         'Pass a CBSA, statewide rural (999xx) or transition '
-                         '(50xxx) code from GET /api/wage-index-areas.',
-                'hipps_code': hipps_code,
-                'dimensions': breakdown,
-            }), 400
-        payment = calculate_payment(hipps_code, v['area_code'])
+        payment = None
+        payment_note = None
+        if v['area_code']:
+            calculated = calculate_payment(hipps_code, v['area_code'])
+            if calculated.get('estimated_payment') is not None:
+                payment = calculated
+            else:
+                problems = (calculated.get('invalid_inputs')
+                            or calculated.get('missing_inputs') or ['unknown'])
+                payment_note = ('Payment could not be calculated: %s'
+                                % '; '.join(problems))
+        elif v['zip_code']:
+            payment_note = ('A site of service is required for a payment '
+                            'estimate. CMS keys the wage index on CBSA, not '
+                            'ZIP, so choose an area rather than entering a ZIP.')
+        else:
+            payment_note = ('Select a site of service to see the estimated '
+                            'payment for this HIPPS code.')
 
         return jsonify({
             'hipps_code': hipps_code,
@@ -213,6 +226,7 @@ def api_hipps():
             'functional': functional,
             'comorbidity_adjustment': comorbidity_adj,
             'payment': payment,
+            'payment_note': payment_note,
         })
     except ValidationError as ve:
         return jsonify({'error': str(ve)}), 400
