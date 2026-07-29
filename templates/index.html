@@ -370,6 +370,16 @@
                     </div>
                 </div>
 
+                <!-- Site of service. The calculator needs its own control:
+                     relying on the selector inside the collapsed estimate panel
+                     meant this arrived blank and no payment could be returned. -->
+                <div class="hipps-area">
+                    <label for="hipps-area-code" class="hipps-area-label">Site of service (for payment estimate)</label>
+                    <select id="hipps-area-code" class="zip-input">
+                        <option value="">Select a CBSA or statewide rural area…</option>
+                    </select>
+                </div>
+
                 <!-- HIPPS Progress Indicator -->
                 <div class="hipps-progress">
                     <div class="hipps-progress-track"><div id="hipps-progress-fill" class="hipps-progress-fill"></div></div>

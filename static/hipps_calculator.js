@@ -138,6 +138,36 @@
         return scores;
     }
 
+    // --- Populate the site-of-service selector from CMS areas ---
+
+    function loadAreas() {
+        const sel = document.getElementById('hipps-area-code');
+        if (!sel) return;
+        fetch('/api/wage-index-areas')
+            .then(r => r.json())
+            .then(data => {
+                const byState = {};
+                (data.areas || []).forEach(a => {
+                    const st = (a.states && a.states[0]) || 'Other';
+                    (byState[st] = byState[st] || []).push(a);
+                });
+                Object.keys(byState).sort().forEach(st => {
+                    const g = document.createElement('optgroup');
+                    g.label = st;
+                    byState[st].forEach(a => {
+                        const o = document.createElement('option');
+                        o.value = a.code;
+                        o.textContent = `${a.name} \u2014 WI ${a.wage_index.toFixed(4)}`;
+                        g.appendChild(o);
+                    });
+                    sel.appendChild(g);
+                });
+            })
+            .catch(() => { /* selector stays usable; payment just won't render */ });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAreas);
+
     // --- Calculate HIPPS ---
 
     window.calculateHIPPS = function () {
@@ -160,7 +190,8 @@
             gg0170: collectGGScores('gg0170'),
             // CMS keys the wage index on CBSA, not ZIP. area-code is the
             // selector populated from GET /api/wage-index-areas.
-            area_code: document.getElementById('area-code')?.value || '',
+            area_code: document.getElementById('hipps-area-code')?.value
+                || document.getElementById('area-code')?.value || '',
         };
 
         fetch('/api/hipps', {
@@ -187,15 +218,50 @@
 
     // --- Render Result ---
 
+    function money(n) {
+        return '$' + n.toLocaleString('en-US', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2,
+        });
+    }
+
     function renderHIPPSResult(r) {
         const container = document.getElementById('hipps-result');
         const d = r.dimensions;
-        const p = r.payment;
+        const p = r.payment;   // complete object, or null when no site of service
+
+        // The HIPPS code and its dimensions never depend on geography, so they
+        // always render. Only the payment block is conditional -- reading
+        // payment fields unconditionally is what previously threw and surfaced
+        // as "HIPPS calculation failed".
+        const weight = d.case_mix_weight;
+
+        let paymentBlock;
+        if (p) {
+            paymentBlock = `
+            <div class="hipps-payment">
+                <div class="pay-label">${p.is_lupa ? 'Estimated LUPA Payment' : 'Estimated 30-Day Payment'}</div>
+                <div class="amount">${money(p.estimated_payment)}</div>
+                <div class="pay-detail">National rate ${money(p.national_base_rate)} × weight ${weight.toFixed(4)}, wage-adjusted for ${p.area_name}</div>
+                <div class="pay-detail">LUPA threshold: ${p.lupa_threshold} visits</div>
+                <div class="pay-detail" style="margin-top:0.5rem; font-style:italic;">${p.disclaimer}</div>
+            </div>`;
+        } else {
+            paymentBlock = `
+            <div class="hipps-payment">
+                <div class="pay-label">Estimated 30-Day Payment</div>
+                <div class="amount" style="font-size:1.1rem; opacity:0.75;">Not available</div>
+                <div class="pay-detail">${r.payment_note || 'Select a site of service to see the payment for this HIPPS code.'}</div>
+            </div>`;
+        }
+
+        const wageRow = p
+            ? `<div class="item"><span class="item-label">Wage Index</span><span class="item-value">${p.wage_index.toFixed(4)} — ${p.area_name}</span></div>`
+            : '';
 
         container.innerHTML = `
             <div class="hipps-code-display">
                 <div class="code">${r.hipps_code}</div>
-                <div class="code-label">HIPPS Code — Case-Mix Weight: ${p.case_mix_weight.toFixed(4)}</div>
+                <div class="code-label">HIPPS Code — Case-Mix Weight: ${weight.toFixed(4)}</div>
             </div>
             <div class="hipps-breakdown">
                 <div class="item"><span class="item-label">Clinical Group</span><span class="item-value">${d.clinical_group} — ${d.clinical_group_name}</span></div>
@@ -203,14 +269,10 @@
                 <div class="item"><span class="item-label">Episode Timing</span><span class="item-value">${d.episode_timing}</span></div>
                 <div class="item"><span class="item-label">Functional Level</span><span class="item-value">${d.functional_level} (score: ${r.functional.raw_score}/${r.functional.max_possible})</span></div>
                 <div class="item"><span class="item-label">Comorbidity Adj.</span><span class="item-value">${d.comorbidity_adjustment}</span></div>
-                <div class="item"><span class="item-label">Wage Index</span><span class="item-value">${p.wage_index.toFixed(3)}</span></div>
+                <div class="item"><span class="item-label">LUPA Threshold</span><span class="item-value">${d.lupa_threshold} visits</span></div>
+                ${wageRow}
             </div>
-            <div class="hipps-payment">
-                <div class="pay-label">Estimated 30-Day Payment</div>
-                <div class="amount">$${p.estimated_payment.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                <div class="pay-detail">Base: $${p.adjusted_base_rate.toLocaleString('en-US', { minimumFractionDigits: 2 })} × Weight: ${p.case_mix_weight.toFixed(4)}</div>
-                <div class="pay-detail" style="margin-top:0.5rem; font-style:italic;">${p.disclaimer}</div>
-            </div>
+            ${paymentBlock}
         `;
         container.style.display = 'block';
     }
