@@ -20,21 +20,6 @@ def lookup_pdgm(query: str, service_date=None) -> Dict[str, Any]:
     if re.fullmatch(r'[A-Z][0-9][0-9A-Z]{1,5}', normalized):
         return explain_pdgm_for_icd10(normalized, service_date)
 
-    # Search known codes
-    hits = search_icd10(query, service_date=service_date)
-    if hits:
-        code = hits[0].get('code') or hits[0].get('ICD10') or hits[0].get('icd10')
-        if code:
-            return explain_pdgm_for_icd10(code, service_date)
-
-    # AI mapping fallback
-    mapped = (map_phrase_to_code(query, service_date=service_date)
-              if service_date is not None else map_phrase_to_code(query))
-    if mapped and isinstance(mapped, str):
-        # The AI returns a text response, not a dict — extract code from it
-        match = re.search(r'\b[A-TV-Z][0-9][0-9A-Z]{1,6}\b', mapped)
-        if match:
-            return explain_pdgm_for_icd10(match.group(0), service_date)
-        return {'icd10': None, 'raw': {}, 'details': {}, 'ai_response': mapped}
-
-    return {'icd10': None, 'raw': {}, 'details': {}}
+    # A phrase is a search, not authorization to assign its first match.
+    return {'selection_required': True, 'query': query,
+            'candidates': search_icd10(query, limit=25, service_date=service_date)}

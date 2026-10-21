@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pdgm-v6';
+const CACHE_NAME = 'pdgm-v7';
 const STATIC_ASSETS = [
     '/',
     '/static/style.css',
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
     '/static/cross_browser_compatibility.css',
     '/static/enhanced_query_progress.css',
     '/static/enhanced_query_progress.js',
+    '/static/diagnosis_search.js',
     '/static/hipps_calculator.js',
     '/static/provider_clarification.js',
     '/static/animations.js',

@@ -88,8 +88,8 @@ def test_unknown_code_is_not_eligible_in_either_workflow(client, monkeypatch):
     from services.pdgm import rules_engine
 
     monkeypatch.setattr(rules_engine, 'map_phrase_to_code', lambda _, service_date=None: None)
-    lookup = client.post('/api/lookup', json={'query': 'ZZZZZ'}).get_json()
-    response = client.post('/api/hipps', json={'primary_icd10': 'ZZZZZ'})
+    lookup = client.post('/api/lookup', json={'query': 'Z99.9999'}).get_json()
+    response = client.post('/api/hipps', json={'primary_icd10': 'Z99.9999'})
     assert response.status_code == 400
     rejected = response.get_json()
     assert lookup['primary_eligibility'] == rejected['primary_eligibility']

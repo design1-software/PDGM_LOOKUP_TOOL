@@ -184,14 +184,16 @@
                                 d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                         <input type="text" id="diagnosis-input" name="diagnosis" class="form-input"
-                            style="padding-left: 2.5rem; padding-right: 2.5rem;" placeholder="e.g. CHF exacerbation with skilled SN or E11.65"
+                            style="padding-left: 2.5rem; padding-right: 2.5rem;" placeholder="e.g. heart failure, high blood pressure, or E11.65"
                             required>
                         <button type="button" id="voice-btn" class="voice-btn" aria-label="Voice input">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                         </button>
-                        <div id="suggestions" class="autocomplete-list" style="display:none;"></div>
+                        <div id="suggestions" class="autocomplete-list" aria-label="Potential ICD-10 matches" style="display:none;"></div>
                     </div>
                 </div>
+
+                <p class="diagnosis-version-note">Don’t know the code? Enter a condition or common abbreviation, then choose a potential match. Use the documented diagnosis to confirm the full description.</p>
 
                 <div class="form-group">
                     <label for="service-date" class="form-label">Claim From date</label>
@@ -248,7 +250,20 @@
                 </div>
 
                 <div id="response-content" class="response-content">
-                    {% if result %}
+                    {% if result and result.selection_required %}
+                    <h3>Choose a potential match</h3>
+                    <p>Choose only a code supported by the documentation. Search matches do not confirm a diagnosis. Refine your search if none fit.</p>
+                    <p>Claim From date: {{ service_date }} · CMS HHGS {{ diagnosis_data.grouper_version }} · Up to 25 options</p>
+                    {% for candidate in result.candidates %}
+                    <form method="post" action="/">
+                        <input type="hidden" name="service_date" value="{{ service_date }}">
+                        <input type="hidden" name="area_code" value="{{ area_code }}">
+                        <button type="submit" name="query" value="{{ candidate.code }}">{{ candidate.code }} — {{ candidate.description }}</button>
+                    </form>
+                    {% else %}
+                    <p>No matching descriptions found. Check spelling and the Claim From date, or try a shorter condition name. No diagnosis was selected.</p>
+                    {% endfor %}
+                    {% elif result %}
                     <div class="consolidated-results-card">
                         <h3 class="results-title">
                             <svg class="results-icon" width="24" height="24" fill="none" stroke="currentColor"
@@ -517,11 +532,14 @@
                         }
                         if (!resp.ok) return;
                         const data = await resp.json();
+                        if (diagnosisInput.value.trim() !== val || document.getElementById('service-date')?.value !== selectedDate) return;
                         const results = data.suggestions || data.results || [];
                         suggestionsBox.innerHTML = '';
                         if (results.length) {
                             results.forEach(r => {
-                                const item = document.createElement('div');
+                                const item = document.createElement('button');
+                                item.type = 'button';
+                                item.style.cssText = 'display:block;width:100%;text-align:left;white-space:normal;';
                                 item.className = 'autocomplete-item';
                                 item.dataset.code = r.code;
                                 item.textContent = `${r.code} - ${r.description}`;
@@ -546,6 +564,8 @@
                 if (!item) return;
                 const code = item.dataset.code;
                 if (code) {
+                    window.pdgmProgress?.cancelQuery();
+                    clearDiagnosisResultsForDateChange();
                     diagnosisInput.value = code;
                     suggestionsBox.style.display = 'none';
                     diagnosisInput.focus();
@@ -603,7 +623,10 @@
                 }
                 const data = await response.json();
 
-                if (data.success) {
+                if (response.ok && data.selection_required) {
+                    resultsSection.style.display = 'none';
+                    window.renderDiagnosisChoices(data);
+                } else if (response.ok) {
                     window.currentResults = data;
                     displayResults(data);
 
@@ -787,6 +810,7 @@
         }
 
         function clearDiagnosisResultsForDateChange() {
+            if (window.clearDiagnosisChoices) window.clearDiagnosisChoices();
             if (window.clearProviderClarification) window.clearProviderClarification();
             window.currentResults = null;
             const results = document.getElementById('results');
@@ -795,12 +819,21 @@
             if (hipps) { hipps.innerHTML = ''; hipps.style.display = 'none'; }
             const button = document.getElementById('btn-calc-hipps');
             if (button) button.disabled = true;
+            ['roadmap-container', 'hipps-panel', 'export-section'].forEach(id => {
+                const panel = document.getElementById(id);
+                if (panel) panel.style.display = 'none';
+            });
             const suggestions = document.getElementById('suggestions');
             if (suggestions) suggestions.style.display = 'none';
             if (window.syncHero) window.syncHero();
         }
         document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('service-date')?.addEventListener('change', clearDiagnosisResultsForDateChange);
+            const invalidate = () => {
+                window.pdgmProgress?.cancelQuery();
+                clearDiagnosisResultsForDateChange();
+            };
+            document.getElementById('service-date')?.addEventListener('change', invalidate);
+            document.getElementById('diagnosis-input')?.addEventListener('input', invalidate);
         });
 
         // Authentication Modal Functions
@@ -1221,7 +1254,8 @@
 
     <!-- Enhanced Loading Indicators -->
     <script src="/static/universal_navigation.js?v=5"></script>
-    <script src="/static/enhanced_query_progress.js?v=8"></script>
+    <script src="/static/diagnosis_search.js?v=1"></script>
+    <script src="/static/enhanced_query_progress.js?v=9"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
     <script src="/static/hipps_calculator.js?v=4"></script>
