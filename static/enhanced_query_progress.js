@@ -213,16 +213,17 @@ class PDGMQueryProgress {
             },
             body: JSON.stringify({
                 query: formData.get('query') || formData.get('diagnosis') || '',
-                area_code: formData.get('area_code') || ''
+                area_code: formData.get('area_code') || '',
+                service_date: formData.get('service_date') || ''
             }),
             signal: controller.signal
         });
 
+        const result = await response.json();
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(result.error || `HTTP error! status: ${response.status}`);
         }
-
-        return await response.json();
+        return result;
     }
 
     completeProgress(result) {
@@ -242,6 +243,8 @@ class PDGMQueryProgress {
         // Hide progress after a moment and show results
         setTimeout(() => {
             container.style.display = 'none';
+            const selectedDate = document.getElementById('service-date')?.value;
+            if (selectedDate && selectedDate !== result.diagnosis_data?.service_date) return;
             window.currentResults = result;
 
             // Show the results section container

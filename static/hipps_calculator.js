@@ -53,11 +53,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     primary_icd10: window.currentResults.icd10,
-                    secondary_icd10s: secondaryDxList
+                    secondary_icd10s: secondaryDxList,
+                    service_date: window.currentResults.diagnosis_data?.service_date
                 })
             });
             const data = await resp.json();
-            renderComorbidityBadge(data.adjustment);
+            renderComorbidityBadge(data.error ? 'Review codes' : data.adjustment);
         } catch (e) {
             renderComorbidityBadge('None');
         }
@@ -83,7 +84,8 @@
         }
         const cls = level === 'High' ? 'adj-high' : level === 'Low' ? 'adj-low' : 'adj-none';
         badge.className = 'comorbidity-badge ' + cls + ' just-changed';
-        badge.textContent = level === 'None' ? 'No Adjustment' : level + ' Comorbidity';
+        badge.textContent = level === 'Review codes' ? 'Review diagnosis codes'
+            : level === 'None' ? 'No Adjustment' : level + ' Comorbidity';
         setTimeout(() => badge.classList.remove('just-changed'), 500);
     }
 
@@ -188,6 +190,7 @@
 
         const payload = {
             primary_icd10: data.icd10,
+            service_date: data.diagnosis_data?.service_date,
             secondary_icd10s: secondaryDxList,
             admission_source: parseInt(document.querySelector('input[name="admission_source"]:checked')?.value || '1', 10),
             episode_timing: parseInt(document.querySelector('input[name="episode_timing"]:checked')?.value || '1', 10),

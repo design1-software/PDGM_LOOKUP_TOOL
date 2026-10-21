@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pdgm-v4';
+const CACHE_NAME = 'pdgm-v5';
 const STATIC_ASSETS = [
     '/',
     '/static/style.css',

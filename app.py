@@ -7,7 +7,6 @@ It is imported by blueprints — it does NOT create a Flask app.
 """
 
 import os
-import csv
 import re
 import json
 from pathlib import Path
@@ -39,8 +38,6 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5")
 AI_LOG_PATH = Path(os.getenv("AI_LOG_PATH", "ai_logs.jsonl"))
 
-_root = Path(__file__).resolve().parent
-CSV_PATH = os.getenv("PDGM_CSV_PATH", str(_root / "CCFTF_pdgm_diagnosis_mapping.csv"))
 
 # ---------------------------------------------------------------------------
 # ICD-10 helpers (also in services/pdgm/impl.py — kept here for direct use)
@@ -58,18 +55,10 @@ def normalize_query(q: str) -> str:
     return q.lower().strip()
 
 
-def load_icd10_map(csv_path=None):
-    code_map = {}
-    path = csv_path or CSV_PATH
-    with open(path, encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            code_map[normalize_icd10(row['icd10_code'])] = row
-    return code_map
+from services.pdgm.impl import load_icd10_map, CurrentDiagnosisMap, _get_map
 
-
-# Load data at import time
-icd10_data = load_icd10_map()
+# Read-only compatibility view; explicit historical requests pass their date.
+icd10_data = CurrentDiagnosisMap()
 
 
 def format_icd10(code: str) -> str:
@@ -94,34 +83,11 @@ def format_pdgm_group(name: str) -> str:
     return name.replace('_', ' ').title()
 
 
-def search_icd10_codes(prefix: str, limit: int = 10):
-    norm = normalize_icd10(prefix)
-    results = []
-
-    # First pass: exact ICD-10 code prefix match
-    for code in sorted(icd10_data):
-        if code.startswith(norm):
-            row = icd10_data[code]
-            results.append({"code": format_icd10(row["icd10_code"]), "description": row.get("description", "")})
-            if len(results) >= limit:
-                break
-
-    # Second pass: description substring match (for natural language like "diabetes")
-    if not results:
-        term = prefix.strip().lower()
-        for code in sorted(icd10_data):
-            row = icd10_data[code]
-            desc = row.get("description", "").lower()
-            if term in desc:
-                results.append({"code": format_icd10(row["icd10_code"]), "description": row.get("description", "")})
-                if len(results) >= limit:
-                    break
-
-    return results
+from services.pdgm.impl import search_icd10_codes
 
 
-def get_candidate_codes(phrase, limit=15):
-    return get_candidate_codes_enhanced(phrase, icd10_data, limit)
+def get_candidate_codes(phrase, limit=15, service_date=None):
+    return get_candidate_codes_enhanced(phrase, _get_map(service_date), limit)
 
 
 def extract_icd10_codes(text: str):
@@ -129,9 +95,10 @@ def extract_icd10_codes(text: str):
     return [normalize_icd10(c) for c in re.findall(pattern, text.upper())]
 
 
-def validate_ai_output(text: str):
+def validate_ai_output(text: str, service_date=None):
     codes = extract_icd10_codes(text)
-    mismatches = [c for c in codes if c not in icd10_data]
+    data = _get_map(service_date)
+    mismatches = [c for c in codes if c not in data]
     return len(mismatches) == 0, mismatches
 
 
@@ -217,7 +184,7 @@ def _call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 500) ->
     ).strip()
 
 
-def ai_map_phrase_to_code(phrase):
+def ai_map_phrase_to_code(phrase, service_date=None):
     if not client:
         return "Anthropic API key not configured."
     system_prompt = (
@@ -231,7 +198,8 @@ def ai_map_phrase_to_code(phrase):
         "Primary Awarding: <Primary Awarding Flag>\nCode First: <Code First>\n"
         "Reason: <Brief explanation for code selection>\nSeparate multiple codes with a blank line. Never invent codes."
     )
-    candidates = get_candidate_codes(phrase)
+    candidates = (get_candidate_codes(phrase, service_date=service_date)
+                  if service_date is not None else get_candidate_codes(phrase))
     code_choices = "\n".join(
         f"{row['icd10_code']}|{row.get('description','')}|{row.get('pdgm_clinical_group_code','')}|"
         f"{row.get('pdgm_clinical_group_name','')}|{row.get('COMORBIDITY_GROUP','')}|"
@@ -247,7 +215,7 @@ def ai_map_phrase_to_code(phrase):
 
     try:
         text = _call_claude(system_prompt, user_prompt, max_tokens=500)
-        valid, mismatches = validate_ai_output(text)
+        valid, mismatches = validate_ai_output(text, service_date)
         log_ai_interaction(CLAUDE_MODEL, phrase, text, mismatches)
         return text
     except anthropic.RateLimitError:

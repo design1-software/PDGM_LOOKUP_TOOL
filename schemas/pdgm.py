@@ -1,5 +1,6 @@
 # Request/response schemas placeholder (use Marshmallow/Pydantic later if needed)
 import re
+from services.pdgm.datasets import select_release
 from typing import TypedDict, List, Optional
 
 class PDGMLookupRequest(TypedDict):
@@ -39,6 +40,12 @@ def _ensure_list_str(v, field, max_items=25):
         raise ValidationError(f"{field} cannot contain more than {max_items} entries")
     return [_CONTROL_CHARS.sub('', x).strip() for x in v if isinstance(x, str) and x.strip()]
 
+def _service_date(payload):
+    value = payload.get('service_date')
+    selected_date, _ = select_release(value)
+    return selected_date.isoformat()  # Pin one date for the entire request.
+
+
 def validate_lookup_request(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError("Body must be a JSON object")
@@ -60,6 +67,7 @@ def validate_lookup_request(payload: dict) -> dict:
         area_code = ""
     return {
         "query": q,
+        "service_date": _service_date(payload),
         "zip_code": zip_code,
         "visit_count": visit_count,
         "area_code": area_code,
@@ -120,6 +128,7 @@ def validate_hipps_request(payload: dict) -> dict:
         area_code = ""
     return {
         "primary_icd10": primary_icd10,
+        "service_date": _service_date(payload),
         "secondary_icd10s": secondary_icd10s,
         "admission_source": admission_source,
         "episode_timing": episode_timing,

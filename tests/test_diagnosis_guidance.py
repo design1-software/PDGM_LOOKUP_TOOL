@@ -47,7 +47,7 @@ def test_lookup_and_hipps_share_actionable_guidance(client, code, flag_code):
 def test_unresolved_lookup_guidance_does_not_call_the_code_invalid(client, monkeypatch):
     from services.pdgm import rules_engine
 
-    monkeypatch.setattr(rules_engine, 'map_phrase_to_code', lambda _: None)
+    monkeypatch.setattr(rules_engine, 'map_phrase_to_code', lambda _, service_date=None: None)
     lookup = client.post('/api/lookup', json={'query': 'ZZZZZ'}).get_json()
     rejected = client.post('/api/hipps', json={'primary_icd10': 'ZZZZZ'}).get_json()
     flag = lookup['flags'][0]

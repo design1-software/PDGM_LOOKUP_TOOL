@@ -15,6 +15,8 @@ function harness() {
         'response-content': node(),
         'hipps-result': { innerHTML: 'Previous payment', style: { display: 'block' } },
         'btn-calc-hipps': { disabled: false, textContent: '' },
+        'results': { style: { display: 'block' } },
+        'service-date': { value: '' },
     };
     const alerts = [];
     const context = vm.createContext({
@@ -27,6 +29,8 @@ function harness() {
             querySelectorAll: () => [],
         },
         escapeHtml: text => String(text),
+        AbortController,
+        setTimeout: callback => callback(), clearTimeout() {}, clearInterval() {},
         fetch() { throw Error('Unexpected request'); },
     });
     vm.runInContext(fs.readFileSync(path.join(root, 'static/hipps_calculator.js'), 'utf8'), context);
@@ -47,6 +51,69 @@ test('new blocked lookup clears old payment and disables HIPPS; valid lookup ena
     assert.equal(elements['btn-calc-hipps'].disabled, false);
     context.displayResults({ icd10: 'E11.65' });
     assert.equal(elements['btn-calc-hipps'].disabled, true);
+});
+
+test('result identifies the exact diagnosis release and selected date', () => {
+    const { context, elements } = harness();
+    context.displayResults({ raw: { icd10_code: 'D6911' }, diagnosis_data: {
+        service_date: '2026-10-01', grouper_version: '07.2.26',
+        effective_from: '2026-10-01', effective_through: '2026-12-31', verified_on: '2026-10-21',
+    } });
+    assert.match(elements['response-content'].innerHTML, /Claim From date: 2026-10-01/);
+    assert.match(elements['response-content'].innerHTML, /CMS HHGS 07.2.26/);
+});
+
+test('changing the date invalidates previous diagnosis and payment results', () => {
+    const { context, elements } = harness();
+    context.window.currentResults = { icd10: 'D691' };
+    context.clearDiagnosisResultsForDateChange();
+    assert.equal(context.window.currentResults, null);
+    assert.equal(elements['results'].style.display, 'none');
+    assert.equal(elements['hipps-result'].innerHTML, '');
+    assert.equal(elements['btn-calc-hipps'].disabled, true);
+});
+
+test('HIPPS request retains the date of the verified lookup', async () => {
+    const { context } = harness();
+    let sent;
+    context.fetch = async (url, options) => {
+        sent = JSON.parse(options.body);
+        return { json: async () => ({ error: 'Stop after request capture' }) };
+    };
+    context.window.currentResults = { icd10: 'D691', primary_eligibility: { eligible: true },
+        diagnosis_data: { service_date: '2026-09-30' } };
+    context.window.calculateHIPPS();
+    await new Promise(setImmediate);
+    assert.equal(sent.service_date, '2026-09-30');
+});
+
+test('lookup request sends date and surfaces unsupported-date errors', async () => {
+    const { context } = harness();
+    context.document.readyState = 'loading';
+    vm.runInContext(fs.readFileSync(path.join(root, 'static/enhanced_query_progress.js'), 'utf8'), context);
+    let sent;
+    context.fetch = async (url, options) => {
+        sent = JSON.parse(options.body);
+        return { ok: false, status: 400, json: async () => ({ error: 'No verified mapping for this date' }) };
+    };
+    const method = vm.runInContext('PDGMQueryProgress.prototype.makeAPIRequest', context);
+    await assert.rejects(method.call({}, new Map([
+        ['diagnosis', 'E1165'], ['service_date', '2027-01-01'],
+    ])), /No verified mapping for this date/);
+    assert.equal(sent.service_date, '2027-01-01');
+});
+
+test('an in-flight lookup for another date cannot restore stale results', () => {
+    const { context, elements } = harness();
+    context.document.readyState = 'loading';
+    vm.runInContext(fs.readFileSync(path.join(root, 'static/enhanced_query_progress.js'), 'utf8'), context);
+    elements['service-date'].value = '2026-10-01';
+    elements['enhanced-progress-container'] = { style: {}, querySelector: () => ({ style: {} }) };
+    context.window.currentResults = null;
+    const complete = vm.runInContext('PDGMQueryProgress.prototype.completeProgress', context);
+    complete.call({ progressStages: [] }, { diagnosis_data: { service_date: '2026-09-30' } });
+    assert.equal(context.window.currentResults, null);
+    assert.equal(elements['enhanced-progress-container'].style.display, 'none');
 });
 
 test('diagnosis alerts show explanation and next step as text, with existing severity styling', () => {

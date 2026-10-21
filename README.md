@@ -8,7 +8,7 @@ A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-
 
 ### 1. PDGM Code Lookup
 - Enter an ICD-10 code (e.g., `I10`) or a clinical phrase (e.g., "congestive heart failure")
-- **Direct CSV match**: instant lookup against the official PDGM diagnosis mapping
+- **Date-selected lookup**: verified CMS diagnosis mappings for claim From dates in 2026; results identify the release and verification date
 - **AI fallback**: when no exact code match is found, Claude maps the phrase to the best candidate code(s) from the CSV, validated before returning
 - Returns: clinical group, comorbidity group, code-first sequencing and a clinical rationale; lookup results do not establish billability or payment coverage
 
@@ -107,7 +107,7 @@ pip install pytest
 pytest tests/ -q
 ```
 
-All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic client (see `tests/conftest.py`) — no API key needed.
+Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (see `tests/conftest.py`). Run with `ANTHROPIC_API_KEY='' python -m pytest -q`; JavaScript behavior checks run with `node --test tests/test_primary_eligibility_ui.cjs`.
 
 ---
 
@@ -125,7 +125,7 @@ All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic c
 | `MAIL_USE_TLS` | For email | `True` | Enable TLS |
 | `MAIL_USERNAME` | For email | - | SMTP username |
 | `MAIL_PASSWORD` | For email | - | SMTP password |
-| `PDGM_CSV_PATH` | No | `./CCFTF_pdgm_diagnosis_mapping.csv` | Path to PDGM mapping CSV |
+| `PDGM_CSV_PATH` | No | `./CCFTF_pdgm_diagnosis_mapping.csv` | Exact verified April 2026 baseline; mismatched content is rejected |
 
 ---
 
@@ -246,7 +246,7 @@ Set the required environment variables (`ANTHROPIC_API_KEY`, `DATABASE_URL`, `FL
 ## Data Sources
 
 ### PDGM Diagnosis Mapping CSV
-`CCFTF_pdgm_diagnosis_mapping.csv` — 74,719 rows built from the **CMS HH PDGM Grouper v07.1.26 (April 2026)** official `Diagnosis_Codes.txt` table. This is the latest available CMS data as of March 2026.
+`CCFTF_pdgm_diagnosis_mapping.csv` is the verified **April 2026 (07.1.26) baseline** with 74,719 rows. Release overlays under `data/cms/diagnoses/` reconstruct all supported 2026 diagnosis mappings, including October 2026 (07.2.26). See [provenance and refresh instructions](data/cms/diagnoses/SOURCES.md).
 
 | Column | Example | Description |
 |--------|---------|-------------|
@@ -256,7 +256,7 @@ Set the required environment variables (`ANTHROPIC_API_KEY`, `DATABASE_URL`, `FL
 | `pdgm_clinical_group_name` | `MMTA_CARDIAC` | Full PDGM group name |
 | `PRIMARY_AWARDING_FLAG` | `0` | Present in the source data but not a usable signal — `0` on 74,718 of the 74,719 rows. Use `UNACCEPTABLE_PDX` for principal-diagnosis eligibility. |
 | `COMORBIDITY_GROUP` | `No_group` | Comorbidity classification |
-| `CODE_FIRST` | `0` | Must be sequenced first (0/1) |
+| `CODE_FIRST` | `0` | Code-first entry; nonzero values require sequencing review, not blanket rejection |
 | `SUBCHAPTER` | `I10-I16` | ICD-10 subchapter range |
 | `MANIFESTATION_FLAG` | `0` | Manifestation code (0/1) |
 | `ECOI_FLAG` | `0` | External cause of injury (0/1) |
@@ -302,11 +302,24 @@ Rate constants (the $2,038.22 national 30-day rate, per-visit amounts, LUPA add-
 ### Section 111 Reference File (Not Used by the Application)
 `section111_excluded_icd10_fy2026.xlsx` is retained as a reference only. Section 111 exclusions concern liability, no-fault, and workers’ compensation reporting, not home health billability or PDGM primary-diagnosis eligibility. The application does not load this file or pass its exclusions to AI. See [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists).
 
-### Keeping Data Current
-CMS updates PDGM groupings annually (October, with mid-year updates in January/April). To update:
-1. Download the latest HH PDGM Grouper from [CMS Grouper Software](https://www.cms.gov/medicare/payment/prospective-payment-systems/home-health/home-health-grouper-software)
-2. Extract `Diagnosis_Codes.txt` from the `tables/Versions/<latest>/RT/` folder inside the ZIP
-3. Rebuild the CSV (tab-delimited source → comma-delimited with group name mapping)
+### Diagnosis Versions and Keeping Data Current
+
+Use `service_date` (YYYY-MM-DD) on diagnosis APIs to select the claim period's
+From date. Without it, the app uses today in America/Chicago. Supported mappings
+are 07.0.26 (January–March), 07.1.26 (April–September), and 07.2.26
+(October–December 2026). Unsupported or malformed dates return HTTP 400.
+
+Results expose `diagnosis_data` with the date, release, effective/supported
+interval, verification date, and source URL. The form includes a Claim From date
+field, and HIPPS/secondary diagnoses, suggestions, comparisons, AI candidate
+selection, and offline exports use the same selected release. Exact codes absent
+from that release are not silently replaced through prefix search or AI.
+
+The original CSV remains the April baseline; it is not the current release by
+itself. Checksums verify the baseline, overlays, and reconstructed tables.
+See [data/cms/diagnoses/SOURCES.md](data/cms/diagnoses/SOURCES.md) for the official
+packages, the full-table comparison, supported intervals, and reproducible build
+command. A new diagnosis release and a new payment year require separate refreshes.
 
 ---
 
@@ -365,7 +378,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 ├── prompts/                        # Prompt template files
 ├── templates/                      # Jinja2 HTML templates
 ├── static/                         # CSS, JS, icons
-├── tests/                          # 55 pytest tests
+├── tests/                          # pytest regression tests
 ├── data/cms/cy2026/                # CMS CY 2026 rate data + SOURCES.md
 ├── CCFTF_pdgm_diagnosis_mapping.csv   # 74K ICD-10 to PDGM mappings
 ├── section111_excluded_icd10_fy2026.xlsx   # Unused Section 111 reference file

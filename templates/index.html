@@ -193,6 +193,13 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="service-date" class="form-label">Claim From date</label>
+                    <input type="date" id="service-date" name="service_date" class="form-input"
+                           value="{{ service_date }}" min="{{ diagnosis_date_min }}" max="{{ diagnosis_date_max }}" required>
+                    <small class="diagnosis-version-note">Use the claim period’s From date to select the applicable diagnosis mapping.</small>
+                </div>
+
                 <!-- CY 2026 payment range (optional).
                      CMS keys the wage index on CBSA, not ZIP, and publishes no
                      ZIP-to-CBSA mapping in the rate files, so the user picks an
@@ -502,7 +509,8 @@
                         return;
                     }
                     try {
-                        const resp = await fetch(`/api/suggest?q=${encodeURIComponent(val)}`);
+                        const selectedDate = document.getElementById('service-date')?.value || '';
+                        const resp = await fetch(`/api/suggest?q=${encodeURIComponent(val)}&service_date=${encodeURIComponent(selectedDate)}`);
                         if (resp.status === 429) {
                             console.warn('Rate limit hit. Backing off...');
                             return;
@@ -581,7 +589,8 @@
                     },
                     body: JSON.stringify({
                         query: diagnosis,
-                        area_code: areaCode || document.getElementById('area-code')?.value || ''
+                        area_code: areaCode || document.getElementById('area-code')?.value || '',
+                        service_date: document.getElementById('service-date')?.value || ''
                     })
                 });
 
@@ -725,6 +734,11 @@
                 `;
             }
 
+            if (data.diagnosis_data) {
+                const version = data.diagnosis_data;
+                html += `<p class="diagnosis-version-note">Claim From date: ${esc(version.service_date)} · CMS HHGS ${esc(version.grouper_version)} diagnosis mapping · Effective ${esc(version.effective_from)} through ${esc(version.effective_through)} · Verified ${esc(version.verified_on)}</p>`;
+            }
+
             // Red flag alerts — build with DOM to avoid injecting f.message via innerHTML
             responseContent.innerHTML = html;
             if (data.flags && data.flags.length > 0) {
@@ -768,6 +782,22 @@
             // Save to recent searches
             if (window.recentSearches) window.recentSearches.add(window.currentQuery || icd10, icd10);
         }
+
+        function clearDiagnosisResultsForDateChange() {
+            window.currentResults = null;
+            const results = document.getElementById('results');
+            if (results) results.style.display = 'none';
+            const hipps = document.getElementById('hipps-result');
+            if (hipps) { hipps.innerHTML = ''; hipps.style.display = 'none'; }
+            const button = document.getElementById('btn-calc-hipps');
+            if (button) button.disabled = true;
+            const suggestions = document.getElementById('suggestions');
+            if (suggestions) suggestions.style.display = 'none';
+            if (window.syncHero) window.syncHero();
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('service-date')?.addEventListener('change', clearDiagnosisResultsForDateChange);
+        });
 
         // Authentication Modal Functions
         function openAuthModal(type) {
@@ -1142,6 +1172,8 @@
                 '<table><tr><th>ICD-10 Code</th><td><strong>' + escapeHtml(icd10) + '</strong></td></tr>' +
                 '<tr><th>Description</th><td>' + escapeHtml(desc) + '</td></tr>' +
                 '<tr><th>Clinical Group</th><td>' + escapeHtml(group) + '</td></tr></table>' +
+                (d.diagnosis_data ? '<p>Claim From date: ' + escapeHtml(d.diagnosis_data.service_date) +
+                ' · CMS HHGS ' + escapeHtml(d.diagnosis_data.grouper_version) + ' diagnosis mapping</p>' : '') +
                 (rng ? '<h2>CY ' + escapeHtml(String(rng.payment_year)) + ' Estimated Reimbursement Range</h2><table>' +
                 '<tr><th>Payment Range</th><td><strong>' + fmt(rng.min_payment) + ' &ndash; ' + fmt(rng.max_payment) + '</strong></td></tr>' +
                 '<tr><th>Clinical Group</th><td>' + escapeHtml(rng.clinical_group) + '</td></tr>' +
@@ -1183,12 +1215,12 @@
 
     <!-- Enhanced Loading Indicators -->
     <script src="/static/universal_navigation.js?v=5"></script>
-    <script src="/static/enhanced_query_progress.js?v=6"></script>
+    <script src="/static/enhanced_query_progress.js?v=7"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
-    <script src="/static/hipps_calculator.js?v=3"></script>
+    <script src="/static/hipps_calculator.js?v=4"></script>
     <script src="/static/supply_crosswalk.js?v=1"></script>
-    <script src="/static/comparison_mode.js?v=1"></script>
+    <script src="/static/comparison_mode.js?v=2"></script>
     <script src="/static/animations.js?v=3"></script>
     <script src="{{ url_for('static', filename='fixed_interactive_followup.js') }}"></script>
 </body>
