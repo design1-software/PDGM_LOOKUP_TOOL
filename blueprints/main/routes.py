@@ -67,7 +67,9 @@ def index():
                 f"Description: {row.get('description','')}",
                 f"PDGM Group: {format_pdgm_group(row.get('pdgm_clinical_group_name',''))}",
                 f"Comorbidity Group: {row.get('COMORBIDITY_GROUP','')}",
-                f"Code First: {row.get('CODE_FIRST','')}",
+                'Code First: ' + ('Review sequencing instructions below' if any(
+                    flag['code'] == 'CODE_FIRST' for flag in assessment['flags']
+                ) else 'No code-first entry in loaded mapping'),
             ]
             labels = {
                 'UNACCEPTABLE_PDX': 'Unacceptable PDx: Yes',
@@ -75,6 +77,8 @@ def index():
             }
             for flag in assessment['flags']:
                 lines.append(f"{labels.get(flag['code'], flag['code'])} - {flag['message']}")
+                lines.append(f"What this means: {flag['explanation']}")
+                lines.append(f"Next step: {flag['next_step']}")
             text_result = "\n".join(lines)
             # A diagnosis fixes the clinical group but not the functional level,
             # admission source/timing or comorbidity adjustment, so show the

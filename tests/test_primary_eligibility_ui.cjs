@@ -7,8 +7,12 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 
 function harness() {
+    function node() {
+        return { children: [], innerHTML: '', textContent: '',
+            appendChild(child) { this.children.push(child); } };
+    }
     const elements = {
-        'response-content': { innerHTML: '', appendChild() {} },
+        'response-content': node(),
         'hipps-result': { innerHTML: 'Previous payment', style: { display: 'block' } },
         'btn-calc-hipps': { disabled: false, textContent: '' },
     };
@@ -16,6 +20,7 @@ function harness() {
     const context = vm.createContext({
         window: {}, alert: message => alerts.push(message),
         document: {
+            createElement: () => node(),
             addEventListener() {},
             getElementById: id => elements[id] || null,
             querySelector: () => null,
@@ -42,6 +47,38 @@ test('new blocked lookup clears old payment and disables HIPPS; valid lookup ena
     assert.equal(elements['btn-calc-hipps'].disabled, false);
     context.displayResults({ icd10: 'E11.65' });
     assert.equal(elements['btn-calc-hipps'].disabled, true);
+});
+
+test('diagnosis alerts show explanation and next step as text, with existing severity styling', () => {
+    const { context, elements } = harness();
+    context.displayResults({
+        icd10: 'D63.1', raw: { icd10_code: 'D631' },
+        primary_eligibility: { eligible: false },
+        flags: [{ type: 'warning', message: 'Code-first sequencing needs review',
+            explanation: '<img src=x onerror=alert(1)>', next_step: 'Review the documented underlying condition.' }],
+    });
+    const badge = elements['response-content'].children[0].children[0];
+    const content = badge.children[0];
+    assert.equal(badge.className, 'flag-badge flag-warning');
+    assert.match(content.children[0].textContent, /Code-first sequencing/);
+    assert.equal(content.children[1].textContent, '<img src=x onerror=alert(1)>');
+    assert.equal(content.children[1].innerHTML, '');
+    assert.equal(content.children[2].textContent, 'Next step: Review the documented underlying condition.');
+});
+
+test('unresolved lookup is labeled unverified rather than complete', () => {
+    const { context, elements } = harness();
+    context.displayResults({ raw: {}, primary_eligibility: { eligible: false } });
+    assert.match(elements['response-content'].innerHTML, /Diagnosis not verified/);
+    assert.doesNotMatch(elements['response-content'].innerHTML, /PDGM Analysis Complete/);
+});
+
+test('older flags without explanation fields still render', () => {
+    const { context, elements } = harness();
+    context.displayResults({ flags: [{ type: 'error', message: 'Legacy warning' }] });
+    const content = elements['response-content'].children[0].children[0].children[0];
+    assert.equal(content.children.length, 1);
+    assert.match(content.children[0].textContent, /Legacy warning/);
 });
 
 test('direct JavaScript invocation cannot calculate a blocked diagnosis', () => {
