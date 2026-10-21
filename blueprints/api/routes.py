@@ -1,3 +1,4 @@
+from services.pdgm.datasets import diagnosis_metadata, DiagnosisDateError, DiagnosisDataError
 from flask import jsonify, current_app, request, session
 from schemas.pdgm import (
     ValidationError, validate_lookup_request, validate_roadmap_request,
@@ -45,7 +46,8 @@ def api_lookup():
         # cannot determine. POST /api/hipps handles that.
 
         from services.pdgm.rules_engine import lookup_pdgm
-        payload = lookup_pdgm(query)
+        payload = lookup_pdgm(query, v['service_date'])
+        payload['diagnosis_data'] = diagnosis_metadata(v['service_date'])
 
         from services.pdgm.eligibility import assess_primary_diagnosis
         assessment = assess_primary_diagnosis(payload.get('raw'))
@@ -75,7 +77,7 @@ def api_lookup():
             )
 
         return jsonify(payload)
-    except ValidationError as ve:
+    except (ValidationError, DiagnosisDateError) as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         current_app.logger.error(f'/api/lookup error: {e}')
@@ -92,7 +94,7 @@ def api_roadmap():
         from app import ai_documentation_roadmap
         result = ai_documentation_roadmap(v['diagnosis'], v['pdgm_group'], v['disciplines'])
         return jsonify({'roadmap': result})
-    except ValidationError as ve:
+    except (ValidationError, DiagnosisDateError) as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         current_app.logger.error(f'/api/roadmap error: {e}')
@@ -109,7 +111,7 @@ def api_assessment():
         from app import ai_sample_oasis_assessment
         result = ai_sample_oasis_assessment(v['diagnosis'], v['pdgm_group'])
         return jsonify({'assessment': result})
-    except ValidationError as ve:
+    except (ValidationError, DiagnosisDateError) as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         current_app.logger.error(f'/api/assessment error: {e}')
@@ -124,7 +126,7 @@ def api_hipps():
         body = request.get_json(silent=True) or {}
         v = validate_hipps_request(body)
 
-        from app import normalize_icd10, icd10_data
+        from app import normalize_icd10
         from services.pdgm.comorbidity import determine_comorbidity_adjustment
         from services.pdgm.functional import calculate_functional_level
         from services.pdgm.hipps import generate_hipps_code, decode_hipps, calculate_payment
@@ -134,13 +136,15 @@ def api_hipps():
 
         # Use the same mapping and primary-diagnosis assessment as lookup.
         primary_norm = normalize_icd10(v['primary_icd10'])
-        primary_row = get_icd10_map().get(primary_norm)
+        data = get_icd10_map(v['service_date'])
+        metadata = diagnosis_metadata(v['service_date'])
+        primary_row = data.get(primary_norm)
         assessment = assess_primary_diagnosis(primary_row)
         if not assessment['primary_eligibility']['eligible']:
             error = (f"ICD-10 code not found: {v['primary_icd10']}" if not primary_row
                      else '; '.join(flag['message'] for flag in assessment['flags']
                                     if flag['type'] == 'error'))
-            return jsonify(error=error, **assessment), 400
+            return jsonify(error=error, diagnosis_data=metadata, **assessment), 400
 
         clinical_group = primary_row['pdgm_clinical_group_code']
 
@@ -150,7 +154,10 @@ def api_hipps():
         secondary_details = []
         for code_str in v['secondary_icd10s']:
             norm = normalize_icd10(code_str)
-            row = icd10_data.get(norm)
+            row = data.get(norm)
+            if not row:
+                return jsonify(error=f"Secondary diagnosis not found for this claim From date: {code_str}",
+                               diagnosis_data=metadata), 400
             if row:
                 secondary_subgroups.append(row.get('COMORBIDITY_GROUP', 'No_group'))
                 secondary_details.append({
@@ -205,6 +212,7 @@ def api_hipps():
 
         return jsonify({
             **assessment,
+            'diagnosis_data': metadata,
             'hipps_code': hipps_code,
             'primary': {
                 'icd10': v['primary_icd10'],
@@ -220,7 +228,7 @@ def api_hipps():
             'payment': payment,
             'payment_note': payment_note,
         })
-    except ValidationError as ve:
+    except (ValidationError, DiagnosisDateError) as ve:
         return jsonify({'error': str(ve)}), 400
     except ValueError as ve:
         return jsonify({'error': str(ve)}), 400
@@ -273,16 +281,29 @@ def api_comorbidity_check():
         body = request.get_json(silent=True) or {}
         primary_code = body.get('primary_icd10', '')
         secondary_codes = body.get('secondary_icd10s', [])
-        from app import normalize_icd10, icd10_data
+        from app import normalize_icd10
         from services.pdgm.comorbidity import determine_comorbidity_adjustment
-        primary_row = icd10_data.get(normalize_icd10(primary_code), {})
+        from services.pdgm.repository import get_icd10_map
+        service_date = body.get('service_date')
+        metadata = diagnosis_metadata(service_date)
+        service_date = metadata['service_date']
+        data = get_icd10_map(service_date)
+        primary_row = data.get(normalize_icd10(primary_code), {})
+        if not primary_row:
+            return jsonify(error='Primary diagnosis not found for this claim From date'), 400
         primary_sg = primary_row.get('COMORBIDITY_GROUP', 'No_group')
         secondary_sgs = []
         for c in secondary_codes:
-            row = icd10_data.get(normalize_icd10(c), {})
+            row = data.get(normalize_icd10(c), {})
+            if not row:
+                return jsonify(error=f'Secondary diagnosis not found for this claim From date: {c}'), 400
             secondary_sgs.append(row.get('COMORBIDITY_GROUP', 'No_group'))
         adj = determine_comorbidity_adjustment(primary_sg, secondary_sgs)
-        return jsonify(adjustment=adj, primary_subgroup=primary_sg, secondary_subgroups=secondary_sgs)
+        return jsonify(adjustment=adj, primary_subgroup=primary_sg, secondary_subgroups=secondary_sgs, diagnosis_data=metadata)
+    except DiagnosisDateError as e:
+        return jsonify(error=str(e)), 400
+    except DiagnosisDataError:
+        return jsonify(error='Diagnosis data verification failed'), 500
     except Exception as e:
         return jsonify(adjustment='None', error=str(e))
 
@@ -294,6 +315,9 @@ def api_compare():
     """Side-by-side diagnosis comparison."""
     try:
         body = request.get_json(silent=True) or {}
+        service_date = body.get('service_date')
+        metadata = diagnosis_metadata(service_date)
+        service_date = metadata['service_date']
         code_a = body.get('code_a', '')
         code_b = body.get('code_b', '')
         from app import normalize_icd10
@@ -305,7 +329,7 @@ def api_compare():
 
         def build_info(code_str):
             from services.pdgm.rules_engine import explain_pdgm_for_icd10
-            info = explain_pdgm_for_icd10(normalize_icd10(code_str))
+            info = explain_pdgm_for_icd10(normalize_icd10(code_str), service_date)
             raw = info.get('raw') or {}
             cg = raw.get('pdgm_clinical_group_code', '')
             if not cg:
@@ -333,7 +357,9 @@ def api_compare():
             } if weights else None
             return info
 
-        return jsonify(a=build_info(code_a), b=build_info(code_b))
+        return jsonify(a=build_info(code_a), b=build_info(code_b), diagnosis_data=metadata)
+    except DiagnosisDateError as e:
+        return jsonify(error=str(e)), 400
     except Exception as e:
         current_app.logger.error(f'/api/compare error: {e}')
         return jsonify({'error': 'comparison failed'}), 500
@@ -344,16 +370,23 @@ def api_compare():
 @require_lead_capture
 def api_offline_data():
     """Compact ICD-10 map for offline PWA lookups."""
-    from app import icd10_data
+    from services.pdgm.repository import get_icd10_map
+    try:
+        service_date = request.args.get('service_date')
+        metadata = diagnosis_metadata(service_date)
+        service_date = metadata['service_date']
+        data = get_icd10_map(service_date)
+    except DiagnosisDateError as e:
+        return jsonify(error=str(e)), 400
     compact = {}
-    for code, row in icd10_data.items():
+    for code, row in data.items():
         compact[code] = {
             'd': row.get('description', ''),
             'g': row.get('pdgm_clinical_group_code', ''),
             'gn': row.get('pdgm_clinical_group_name', ''),
             'cg': row.get('COMORBIDITY_GROUP', ''),
         }
-    return jsonify(data=compact)
+    return jsonify(data=compact, diagnosis_data=metadata)
 
 
 @bp.get('/api/suggest')
@@ -363,8 +396,14 @@ def api_suggest():
         if not q or len(q) < 3:
             return jsonify({'success': True, 'suggestions': []})
         from app import search_icd10_codes
-        results = search_icd10_codes(q)
-        return jsonify({'success': True, 'suggestions': results})
+        service_date = request.args.get('service_date')
+        metadata = diagnosis_metadata(service_date)
+        service_date = metadata['service_date']
+        results = search_icd10_codes(q, service_date=service_date)
+        return jsonify({'success': True, 'suggestions': results,
+                        'diagnosis_data': metadata})
+    except DiagnosisDateError as e:
+        return jsonify(error=str(e)), 400
     except Exception as e:
         current_app.logger.error(f'/api/suggest error: {e}')
         return jsonify({'error': 'failed to load suggestions'}), 500

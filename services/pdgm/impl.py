@@ -2,7 +2,10 @@
 
 import csv
 import os
+from threading import RLock
 from pathlib import Path
+from collections.abc import Mapping
+from .datasets import load_release, select_release
 
 _root = Path(__file__).resolve().parent.parent.parent
 CSV_PATH = os.getenv("PDGM_CSV_PATH", str(_root / "CCFTF_pdgm_diagnosis_mapping.csv"))
@@ -14,7 +17,9 @@ def normalize_icd10(code: str) -> str:
     return code.replace('.', '').replace(' ', '').upper()
 
 
-def load_icd10_map(csv_path=None):
+def load_icd10_map(csv_path=None, service_date=None):
+    if csv_path is None:
+        return load_release(service_date)
     code_map = {}
     path = csv_path or CSV_PATH
     with open(path, encoding='utf-8') as f:
@@ -26,13 +31,35 @@ def load_icd10_map(csv_path=None):
 
 # Cache the loaded map at module level
 _icd10_map = None
+_default_version = None
+_map_lock = RLock()
 
 
-def _get_map():
-    global _icd10_map
-    if _icd10_map is None:
-        _icd10_map = load_icd10_map()
-    return _icd10_map
+def _get_map(service_date=None):
+    global _icd10_map, _default_version
+    with _map_lock:
+        if service_date is not None:
+            _, selected = select_release(service_date)
+            if _icd10_map is not None and _default_version == selected['version']:
+                return _icd10_map
+            return load_icd10_map(service_date=service_date)
+        _, release = select_release()
+        if _icd10_map is None or _default_version != release['version']:
+            _icd10_map = load_icd10_map()
+            _default_version = release['version']
+        return _icd10_map
+
+
+class CurrentDiagnosisMap(Mapping):
+    """Compatibility view: do not freeze today's release at process startup."""
+    def __getitem__(self, key):
+        return _get_map()[key]
+
+    def __iter__(self):
+        return iter(_get_map())
+
+    def __len__(self):
+        return len(_get_map())
 
 
 def format_icd10(code: str) -> str:
@@ -41,9 +68,9 @@ def format_icd10(code: str) -> str:
     return code
 
 
-def search_icd10_codes(prefix: str, limit: int = 10):
+def search_icd10_codes(prefix: str, limit: int = 10, service_date=None):
     norm = normalize_icd10(prefix)
-    data = _get_map()
+    data = _get_map(service_date)
     results = []
 
     # First pass: exact ICD-10 code prefix match

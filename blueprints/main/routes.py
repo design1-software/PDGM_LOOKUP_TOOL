@@ -1,12 +1,14 @@
-from flask import request, redirect, url_for, flash, render_template, session, get_flashed_messages
+from flask import jsonify, request, redirect, url_for, flash, render_template, session, get_flashed_messages
 # removed flask_login import
 from . import bp
 
 from app import (
     normalize_icd10, format_icd10, format_pdgm_group,
-    icd10_data,
     ai_map_phrase_to_code, ai_followup_question,
 )
+from services.pdgm.datasets import diagnosis_metadata, DiagnosisDateError, manifest
+from services.pdgm.repository import get_icd10_map
+import re
 from services import cms_data
 from services.pdgm.eligibility import assess_primary_diagnosis
 from services.reimbursement_service import (
@@ -19,17 +21,17 @@ import uuid
 
 
 @cache.memoize(timeout=3600)
-def get_cached_icd10_data(code):
-    return icd10_data.get(code)
+def get_cached_icd10_data(code, service_date=None):
+    return get_icd10_map(service_date).get(code)
 
 
-def get_cached_ai_response(query):
+def get_cached_ai_response(query, service_date=None):
     """AI response with simple Flask-Caching."""
-    key = f"ai_response:{query.lower().strip()}"
+    key = f"ai_response:{service_date}:{query.lower().strip()}"
     cached = cache.get(key)
     if cached:
         return cached
-    result = ai_map_phrase_to_code(query)
+    result = ai_map_phrase_to_code(query, service_date=service_date)
     cache.set(key, result, timeout=1800)
     return result
 
@@ -39,6 +41,11 @@ def index():
     result = None
     query = ""
     area_code = ""
+    try:
+        metadata = diagnosis_metadata(request.values.get('service_date'))
+    except DiagnosisDateError as e:
+        return jsonify(error=str(e)), 400
+    service_date = metadata['service_date']
 
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
@@ -51,7 +58,7 @@ def index():
         area_code = request.form.get('area_code', '').strip()
 
         icd_code = normalize_icd10(full_query)
-        row = get_cached_icd10_data(icd_code)
+        row = get_cached_icd10_data(icd_code, service_date)
         if row:
             focus = (
                 f"Focus of Care: {format_icd10(row['icd10_code'])} "
@@ -92,8 +99,13 @@ def index():
                     text_result += "\n" + "\n".join(range_lines)
             follow_up = ai_followup_question(full_query)
             result = {'Text': text_result, 'FollowUp': follow_up}
+        elif re.fullmatch(r'[A-Z][0-9][0-9A-Z]{1,5}', icd_code):
+            assessment = assess_primary_diagnosis(None)
+            result = {'Text': '\n'.join(flag['message'] + '\n' + flag['explanation']
+                       + '\nNext step: ' + flag['next_step'] for flag in assessment['flags']),
+                      'FollowUp': ''}
         else:
-            ai_func = lambda _: get_cached_ai_response(full_query)
+            ai_func = lambda _: get_cached_ai_response(full_query, service_date)
             ai_response = ai_map_phrase_to_code_with_payment(ai_func, full_query)
             follow_up = ai_followup_question(full_query)
             result = {'AI': ai_response, 'FollowUp': follow_up}
@@ -101,6 +113,10 @@ def index():
     return render_template(
         'index.html',
         result=result,
+        diagnosis_data=metadata,
+        service_date=service_date,
+        diagnosis_date_min=manifest()['releases'][0]['effective_from'],
+        diagnosis_date_max=manifest()['releases'][-1]['effective_through'],
         query=query,
         area_code=area_code,
         payment_areas=cms_data.list_areas(),

@@ -293,7 +293,7 @@ normalize_icd10("heart failure") → "HEARTFAILURE"  # not a valid code
 
 ### Step 2: Direct CSV Match
 
-The CSV is loaded once at import time into `icd10_data` (dict of 74,261 entries keyed by normalized code). Exact O(1) lookup.
+`services/pdgm/datasets.py` selects a verified CMS diagnosis release by claim From date. The April baseline plus release overlays reconstruct January, April, and October 2026 tables, checked by SHA-256 and row counts. Maps are cached per release; `icd10_data` is a dynamic compatibility view, not an import-time snapshot. Exact lookup remains O(1). See `data/cms/diagnoses/SOURCES.md`.
 
 ### Step 3: AI Fallback (when no direct match)
 
@@ -438,25 +438,25 @@ Uses Flask-Mail with SMTP. Sends plain text email with the due date to the speci
 
 ## Caching Strategy
 
-### Layer 1: CSV Data (Application Lifetime)
+### Layer 1: Verified Diagnosis Data (Per Release)
 
 ```python
-# Loaded once at import time (app.py module level)
-icd10_data = load_icd10_map()      # dict of 74,261 entries
+# Lazily reconstructed and checksum-verified, then cached by CMS release.
+rows = get_icd10_map(service_date)
 ```
 
 ### Layer 2: Code Lookups (Flask-Caching)
 
 ```python
 @cache.memoize(timeout=3600)  # 1 hour
-def get_cached_icd10_data(code):
-    return icd10_data.get(code)
+def get_cached_icd10_data(code, service_date=None):
+    return get_icd10_map(service_date).get(code)
 ```
 
 ### Layer 3: AI Responses (Flask-Caching)
 
 ```python
-key = f"ai_response:{query.lower().strip()}"
+key = f"ai_response:{service_date}:{query.lower().strip()}"
 cached = cache.get(key)
 if cached:
     return cached

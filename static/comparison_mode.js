@@ -44,7 +44,8 @@
             const resp = await fetch('/api/compare', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code_a: codeA, code_b: codeB })
+                body: JSON.stringify({ code_a: codeA, code_b: codeB,
+                    service_date: window.currentResults.diagnosis_data?.service_date })
             });
             const data = await resp.json();
             if (data.error) { alert(data.error); return; }

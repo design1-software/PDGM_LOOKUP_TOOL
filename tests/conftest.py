@@ -2,6 +2,13 @@ import sys
 import types
 import os
 import pytest
+from datetime import date
+
+
+@pytest.fixture(autouse=True)
+def _pin_diagnosis_clock(monkeypatch):
+    from services.pdgm import datasets
+    monkeypatch.setattr(datasets, 'today', lambda: date(2026, 10, 21))
 
 # Set testing env before any app imports
 os.environ['TESTING'] = '1'
