@@ -47,34 +47,20 @@ def api_lookup():
         from services.pdgm.rules_engine import lookup_pdgm
         payload = lookup_pdgm(query)
 
-        # Red flag alerts from CSV data
-        raw = payload.get('raw') or {}
-        flags = []
-        if raw.get('UNACCEPTABLE_PDX') == '1':
-            flags.append({'type': 'error', 'code': 'UNACCEPTABLE_PDX',
-                          'message': 'Unacceptable principal diagnosis — cannot be used as primary Dx'})
-        if raw.get('UNSPECIFIED_PDX') == '1':
-            flags.append({'type': 'warning', 'code': 'UNSPECIFIED_PDX',
-                          'message': 'Unspecified diagnosis — use a more specific code when possible'})
-        if raw.get('MANIFESTATION_FLAG') == '1':
-            flags.append({'type': 'warning', 'code': 'MANIFESTATION',
-                          'message': 'Manifestation code — must be sequenced after the underlying condition'})
-        if raw.get('ECOI_FLAG') == '1':
-            flags.append({'type': 'warning', 'code': 'ECOI',
-                          'message': 'External cause code — cannot be used as principal diagnosis'})
-        # PRIMARY_AWARDING_FLAG is '0' on 74,718 of the 74,719 rows in the CCFTF
-        # mapping (only Z452 is '1'), so a banner keyed on it fired for every
-        # code and told users the opposite of the truth. UNACCEPTABLE_PDX, used
-        # above, is the flag that actually marks codes barred as a principal
-        # diagnosis (1,603 codes).
-        if flags:
-            payload['flags'] = flags
+        from services.pdgm.eligibility import assess_primary_diagnosis
+        assessment = assess_primary_diagnosis(payload.get('raw'))
+        payload.update(assessment)
 
         # Payment range when an area is supplied. A diagnosis fixes the clinical
         # group but not the functional level, admission source/timing, or
         # comorbidity adjustment, so an exact payment isn't knowable here --
         # POST /api/hipps takes those inputs and returns a single figure.
-        if area_code:
+        if not assessment['primary_eligibility']['eligible']:
+            payload['payment_note'] = (
+                'A payment estimate is not available for this primary diagnosis. '
+                'Review the diagnosis alerts.'
+            )
+        elif area_code:
             from services.reimbursement_service import ReimbursementService
             group_code = (payload.get('raw') or {}).get('pdgm_clinical_group_code', '')
             if group_code:
@@ -143,15 +129,20 @@ def api_hipps():
         from services.pdgm.functional import calculate_functional_level
         from services.pdgm.hipps import generate_hipps_code, decode_hipps, calculate_payment
 
-        # Look up primary diagnosis
-        primary_norm = normalize_icd10(v['primary_icd10'])
-        primary_row = icd10_data.get(primary_norm)
-        if not primary_row:
-            return jsonify({'error': f"ICD-10 code not found: {v['primary_icd10']}"}), 400
+        from services.pdgm.repository import get_icd10_map
+        from services.pdgm.eligibility import assess_primary_diagnosis
 
-        clinical_group = primary_row.get('pdgm_clinical_group_code', '')
-        if not clinical_group or clinical_group == 'NA':
-            return jsonify({'error': 'No PDGM clinical group for this code'}), 400
+        # Use the same mapping and primary-diagnosis assessment as lookup.
+        primary_norm = normalize_icd10(v['primary_icd10'])
+        primary_row = get_icd10_map().get(primary_norm)
+        assessment = assess_primary_diagnosis(primary_row)
+        if not assessment['primary_eligibility']['eligible']:
+            error = (f"ICD-10 code not found: {v['primary_icd10']}" if not primary_row
+                     else '; '.join(flag['message'] for flag in assessment['flags']
+                                    if flag['type'] == 'error'))
+            return jsonify(error=error, **assessment), 400
+
+        clinical_group = primary_row['pdgm_clinical_group_code']
 
         # Comorbidity adjustment
         primary_subgroup = primary_row.get('COMORBIDITY_GROUP', 'No_group')
@@ -213,6 +204,7 @@ def api_hipps():
                             'payment for this HIPPS code.')
 
         return jsonify({
+            **assessment,
             'hipps_code': hipps_code,
             'primary': {
                 'icd10': v['primary_icd10'],

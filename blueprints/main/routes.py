@@ -8,6 +8,7 @@ from app import (
     ai_map_phrase_to_code, ai_followup_question,
 )
 from services import cms_data
+from services.pdgm.eligibility import assess_primary_diagnosis
 from services.reimbursement_service import (
     ReimbursementService,
     ai_map_phrase_to_code_with_payment,
@@ -59,9 +60,7 @@ def index():
                 f"{format_pdgm_group(row.get('pdgm_clinical_group_name',''))}  "
                 f"ICD-10: {icd_code}"
             )
-            # Unacceptable/unspecified PDX flags from CMS
-            unacceptable_pdx = row.get('UNACCEPTABLE_PDX', '0') == '1'
-            unspecified_pdx = row.get('UNSPECIFIED_PDX', '0') == '1'
+            assessment = assess_primary_diagnosis(row)
 
             lines = [
                 focus,
@@ -70,15 +69,17 @@ def index():
                 f"Comorbidity Group: {row.get('COMORBIDITY_GROUP','')}",
                 f"Code First: {row.get('CODE_FIRST','')}",
             ]
-            if unacceptable_pdx:
-                lines.append("Unacceptable PDx: Yes - This code cannot be used as a principal diagnosis")
-            if unspecified_pdx:
-                lines.append("Unspecified PDx: Yes - A more specific code should be used when possible")
+            labels = {
+                'UNACCEPTABLE_PDX': 'Unacceptable PDx: Yes',
+                'UNSPECIFIED_PDX': 'Unspecified PDx: Yes',
+            }
+            for flag in assessment['flags']:
+                lines.append(f"{labels.get(flag['code'], flag['code'])} - {flag['message']}")
             text_result = "\n".join(lines)
             # A diagnosis fixes the clinical group but not the functional level,
             # admission source/timing or comorbidity adjustment, so show the
             # bounded range rather than inventing the missing dimensions.
-            if area_code:
+            if area_code and assessment['primary_eligibility']['eligible']:
                 rng = ReimbursementService().payment_range(
                     row.get('pdgm_clinical_group_code', ''), area_code
                 )
