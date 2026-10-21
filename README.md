@@ -37,6 +37,26 @@ same reasons, without generating a HIPPS code or payment. The legacy direct-code
 page uses the same assessment. The calculator button is disabled for blocked or
 unverified results, and a new lookup clears any previous HIPPS/payment result.
 
+### Actionable Diagnosis Alerts
+Each diagnosis flag includes a plain-language `explanation` and `next_step`.
+Lookup shows these inside the existing alert cards; HIPPS returns the same fields,
+and legacy direct-code results include them as text. Unresolved results are labeled
+“Diagnosis not verified,” and missing clinical groups are explained as a limitation
+of the loaded mapping rather than proof that an ICD-10-CM code is invalid.
+
+A nonzero `CODE_FIRST` entry (including values such as `10` or `110`) triggers a
+sequencing-review warning. The mapping's numeric entry is not a replacement
+ICD-10-CM code, and the application does not decode the corresponding instruction
+or determine its applicability from patient documentation. It does not automatically
+block every code-first entry; existing manifestation/primary-diagnosis restrictions
+still apply. Review the applicable Tabular List and service-date instructions.
+See [ICD-10-CM Official Guidelines, Section I.A.13](https://www.cms.gov/files/document/fy-2027-icd-10-cm-coding-guidelines.pdf)
+for conditional sequencing instructions.
+
+Guidance directs staff to review existing documentation before requesting provider
+clarification and does not infer a replacement diagnosis. Provider-request generation,
+changes to code-search fallback behavior, and diagnosis-data refresh are separate work.
+
 ### 3. Recertification Calculator
 - Input a Start of Care (SOC) date and episode length (default 60 days)
 - Calculates the recertification due date
