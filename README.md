@@ -10,7 +10,7 @@ A Flask-based web application that maps ICD-10 diagnosis codes to PDGM (Patient-
 - Enter an ICD-10 code (e.g., `I10`) or a clinical phrase (e.g., "congestive heart failure")
 - **Direct CSV match**: instant lookup against the official PDGM diagnosis mapping
 - **AI fallback**: when no exact code match is found, Claude maps the phrase to the best candidate code(s) from the CSV, validated before returning
-- Returns: clinical group, comorbidity group, code-first sequencing, billable status, and a clinical rationale
+- Returns: clinical group, comorbidity group, code-first sequencing and a clinical rationale; lookup results do not establish billability or payment coverage
 
 ### 2. Reimbursement Estimation (CY 2026)
 All figures come from the CY 2026 CMS Home Health PPS final rule (CMS-1828-F) and CR 14304, read at runtime from `data/cms/cy2026/`. Nothing is estimated — see [data/cms/cy2026/SOURCES.md](data/cms/cy2026/SOURCES.md) for provenance and the CY 2027 refresh procedure.
@@ -92,7 +92,6 @@ All 55 tests pass in ~3 seconds using in-memory SQLite and a stubbed Anthropic c
 | `MAIL_USERNAME` | For email | - | SMTP username |
 | `MAIL_PASSWORD` | For email | - | SMTP password |
 | `PDGM_CSV_PATH` | No | `./CCFTF_pdgm_diagnosis_mapping.csv` | Path to PDGM mapping CSV |
-| `EXCLUDED_XLSX_PATH` | No | `./section111_excluded_icd10_fy2026.xlsx` | Section 111 exclusion list |
 
 ---
 
@@ -266,15 +265,14 @@ Query `GET /api/case-mix-weights` for all 432 weights and thresholds keyed by HI
 
 Rate constants (the $2,038.22 national 30-day rate, per-visit amounts, LUPA add-on factors) are transcribed into `services/reimbursement_service.py` with inline citations to CR 14304 and 90 FR 55405.
 
-### Section 111 Exclusions
-`section111_excluded_icd10_fy2026.xlsx` — FY2026 codes excluded from primary diagnosis selection per CMS Section 111 reporting requirements. Downloaded from [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists).
+### Section 111 Reference File (Not Used by the Application)
+`section111_excluded_icd10_fy2026.xlsx` is retained as a reference only. Section 111 exclusions concern liability, no-fault, and workers’ compensation reporting, not home health billability or PDGM primary-diagnosis eligibility. The application does not load this file or pass its exclusions to AI. See [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists).
 
 ### Keeping Data Current
 CMS updates PDGM groupings annually (October, with mid-year updates in January/April). To update:
 1. Download the latest HH PDGM Grouper from [CMS Grouper Software](https://www.cms.gov/medicare/payment/prospective-payment-systems/home-health/home-health-grouper-software)
 2. Extract `Diagnosis_Codes.txt` from the `tables/Versions/<latest>/RT/` folder inside the ZIP
 3. Rebuild the CSV (tab-delimited source → comma-delimited with group name mapping)
-4. Download the latest Section 111 exclusion list from [CMS ICD Code Lists](https://www.cms.gov/medicare/coordination-benefits-recovery/overview/icd-code-lists)
 
 ---
 
@@ -336,7 +334,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 ├── tests/                          # 55 pytest tests
 ├── data/cms/cy2026/                # CMS CY 2026 rate data + SOURCES.md
 ├── CCFTF_pdgm_diagnosis_mapping.csv   # 74K ICD-10 to PDGM mappings
-├── section111_excluded_icd10_fy2026.xlsx   # Section 111 exclusion list
+├── section111_excluded_icd10_fy2026.xlsx   # Unused Section 111 reference file
 ├── requirements.txt                # Python dependencies (15 packages)
 ├── Dockerfile                      # Production container
 └── ARCHITECTURE.md                 # Architecture documentation

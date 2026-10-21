@@ -65,7 +65,6 @@ Detailed technical architecture of the PDGM Lookup Tool MVP.
     ┌──────▼──────────────────┐
     │  Data Sources           │
     │  - PDGM CSV (74K rows)  │
-    │  - Section 111 XLSX     │
     │  - SQLite / PostgreSQL  │
     └─────────────────────────┘
 ```
@@ -316,8 +315,7 @@ The CSV is loaded once at import time into `icd10_data` (dict of 74,261 entries 
 
 4. OpenAI Prompt Construction
    System: "You are a Utilization Review and Coding Compliance Nurse..."
-   User: "Clinical input: 'CHF exacerbation'\nCodes list:\n[15 candidates]\n
-          Codes excluded as primary: [Section 111 codes]\n"
+   User: "Clinical input: 'CHF exacerbation'\nCodes list:\n[15 candidates]\n"
 
 5. Response Validation
    - Extract all ICD-10 codes from response via regex
@@ -358,7 +356,7 @@ Templates use `{reference_block}` placeholder, replaced at runtime with the appr
 1. **Candidate constraint**: AI only sees 15 pre-selected codes from the CSV, not the full 74K set
 2. **Post-validation**: extracted codes are checked against `icd10_data` dict
 3. **Fallback retry**: if validation fails on primary model, retry with fallback
-4. **Section 111 awareness**: excluded codes are passed to the AI prompt so it avoids selecting them as primary
+4. **Scope of output**: the AI is instructed not to determine billability or payment coverage. Section 111 exclusions are not loaded or supplied to the prompt.
 5. **Logging**: every interaction is logged with mismatch details for QA review
 
 ---
@@ -445,7 +443,6 @@ Uses Flask-Mail with SMTP. Sends plain text email with the due date to the speci
 ```python
 # Loaded once at import time (app.py module level)
 icd10_data = load_icd10_map()      # dict of 74,261 entries
-excluded_codes = load_excluded_codes()  # set of excluded codes
 ```
 
 ### Layer 2: Code Lookups (Flask-Caching)
@@ -505,7 +502,7 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 | **Required (prod)** | `OPENAI_API_KEY`, `DATABASE_URL`, `FLASK_SECRET_KEY` |
 | **AI Config** | `OPENAI_MODEL`, `FALLBACK_MODEL` |
 | **Email** | `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USE_TLS`, `MAIL_USERNAME`, `MAIL_PASSWORD` |
-| **Data Paths** | `PDGM_CSV_PATH`, `EXCLUDED_XLSX_PATH` |
+| **Data Paths** | `PDGM_CSV_PATH` |
 | **Runtime** | `FLASK_ENV`, `ENVIRONMENT`, `PORT` |
 
 ---

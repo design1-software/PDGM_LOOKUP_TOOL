@@ -41,10 +41,6 @@ AI_LOG_PATH = Path(os.getenv("AI_LOG_PATH", "ai_logs.jsonl"))
 
 _root = Path(__file__).resolve().parent
 CSV_PATH = os.getenv("PDGM_CSV_PATH", str(_root / "CCFTF_pdgm_diagnosis_mapping.csv"))
-EXCLUDED_XLSX_PATH = os.getenv(
-    "EXCLUDED_XLSX_PATH",
-    str(_root / "section111_excluded_icd10_fy2026.xlsx"),
-)
 
 # ---------------------------------------------------------------------------
 # ICD-10 helpers (also in services/pdgm/impl.py — kept here for direct use)
@@ -72,27 +68,8 @@ def load_icd10_map(csv_path=None):
     return code_map
 
 
-def load_excluded_codes():
-    try:
-        import openpyxl
-        wb = openpyxl.load_workbook(EXCLUDED_XLSX_PATH, read_only=True, data_only=True)
-        excluded = set()
-        for ws in wb.worksheets:
-            header = [str(c.value).strip().upper() if c.value else '' for c in next(ws.iter_rows(min_row=1, max_row=1))]
-            code_idx = next((i for i, h in enumerate(header) if h == 'CODE'), 0)
-            for row in ws.iter_rows(min_row=2):
-                val = row[code_idx].value
-                if isinstance(val, str) and val.strip():
-                    excluded.add(normalize_icd10(val))
-        wb.close()
-        return excluded
-    except Exception:
-        return set()
-
-
 # Load data at import time
 icd10_data = load_icd10_map()
-excluded_codes = load_excluded_codes()
 
 
 def format_icd10(code: str) -> str:
@@ -172,8 +149,6 @@ def parse_pdgm_details(text):
             details["description"] = line.split(":", 1)[1].strip()
         elif low.startswith("comorbidity group:"):
             details["comorbidity_group"] = line.split(":", 1)[1].strip()
-        elif low.startswith("billable:"):
-            details["billable"] = line.split(":", 1)[1].strip()
         if len(details) >= 4:
             break
     return details
@@ -249,10 +224,11 @@ def ai_map_phrase_to_code(phrase):
         "You are a Utilization Review and Coding Compliance Nurse with 20+ years of Home Health experience, certified in HCS-D, HCS-O, CCS, and Medicare billing. "
         "Given a clinical phrase, select only PDGM-valid ICD-10 code(s) from the provided list, recognizing synonymous phrasing, "
         "prioritizing compliant primary-diagnosis selection, and append one line beginning with \"Reason:\" that briefly states why each code was chosen. "
+        "Do not determine or report billability or payment coverage. "
         "Respond for each match using this format:\n"
         "Focus of Care: <ICD10 no dot> <Description> <PDGM Code> <PDGM Group>  ICD-10: <ICD10 with dot>\n"
         "Description: <Description>\nPDGM Group: <PDGM Group>\nComorbidity Group: <Comorbidity Group>\n"
-        "Primary Awarding: <Primary Awarding Flag>\nCode First: <Code First>\nBillable: <Yes/No (Section 111 Excluded)>\n"
+        "Primary Awarding: <Primary Awarding Flag>\nCode First: <Code First>\n"
         "Reason: <Brief explanation for code selection>\nSeparate multiple codes with a blank line. Never invent codes."
     )
     candidates = get_candidate_codes(phrase)
@@ -262,12 +238,10 @@ def ai_map_phrase_to_code(phrase):
         f"{row.get('PRIMARY_AWARDING_FLAG','')}|{row.get('CODE_FIRST','')}"
         for row in candidates
     )
-    exclusions = ", ".join(list(excluded_codes)[:30]) + ("..." if len(excluded_codes) > 30 else "")
     user_prompt = (
         f"Clinical input: '{phrase}'\n"
         "Codes list (ICD10|Description|PDGM Code|PDGM Group|Comorbidity Group|Primary Awarding|Code First):\n"
         f"{code_choices}\n"
-        f"Codes excluded as primary: {exclusions}\n"
         "Return the closest code(s) in the specified format."
     )
 
