@@ -48,8 +48,8 @@ def test_unresolved_lookup_guidance_does_not_call_the_code_invalid(client, monke
     from services.pdgm import rules_engine
 
     monkeypatch.setattr(rules_engine, 'map_phrase_to_code', lambda _, service_date=None: None)
-    lookup = client.post('/api/lookup', json={'query': 'ZZZZZ'}).get_json()
-    rejected = client.post('/api/hipps', json={'primary_icd10': 'ZZZZZ'}).get_json()
+    lookup = client.post('/api/lookup', json={'query': 'Z99.9999'}).get_json()
+    rejected = client.post('/api/hipps', json={'primary_icd10': 'Z99.9999'}).get_json()
     flag = lookup['flags'][0]
     assert lookup['flags'] == rejected['flags']
     assert flag['code'] == 'CODE_NOT_FOUND'

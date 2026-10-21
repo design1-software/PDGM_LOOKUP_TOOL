@@ -122,15 +122,12 @@ def test_data_failure_never_returns_a_clinical_template(client, monkeypatch):
     assert 'draft' not in result
 
 
-@pytest.mark.parametrize('error', ['Anthropic API key not configured.',
-                                  'Rate limit exceeded. Please try again later.',
-                                  'AI error: service unavailable'])
-def test_ai_service_failure_is_not_reported_as_a_clinical_code_failure(client, monkeypatch, error):
+def test_search_service_failure_is_not_reported_as_a_clinical_code_failure(client, monkeypatch):
     from services.pdgm import rules_engine
-    import app as core
-    monkeypatch.setattr(rules_engine, 'search_icd10', lambda *args, **kwargs: [])
-    monkeypatch.setattr(core, 'ai_map_phrase_to_code', lambda *args, **kwargs: error)
-    response = client.post('/api/lookup', json={'query': 'unmapped clinical phrase', 'service_date': DAY})
+    def fail(*args, **kwargs):
+        raise RuntimeError('Search temporarily unavailable')
+    monkeypatch.setattr(rules_engine, 'search_icd10', fail)
+    response = client.post('/api/lookup', json={'query': 'heart failure', 'service_date': DAY})
     assert response.status_code == 500
     result = response.get_json()
     assert result['clarification_workflow']['state'] == 'technical_failure'

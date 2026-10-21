@@ -95,6 +95,12 @@ class PDGMQueryProgress {
     }
 
     async handleSubmit(form) {
+        this.cancelQuery();
+        const requestId = this.requestId;
+        if (!document.querySelector('#enhanced-progress-container .progress-fill')) {
+            document.getElementById('enhanced-progress-container')?.remove();
+            this.createProgressUI(form);
+        }
         const formData = new FormData(form);
         const diagnosis = formData.get('query') || formData.get('diagnosis') || '';
 
@@ -110,9 +116,9 @@ class PDGMQueryProgress {
         try {
             // Call original submit logic or make API request
             const result = await this.makeAPIRequest(formData);
-            this.completeProgress(result);
+            if (requestId === this.requestId) this.completeProgress(result, requestId);
         } catch (error) {
-            this.handleError(error);
+            if (requestId === this.requestId) this.handleError(error);
         }
     }
 
@@ -156,8 +162,9 @@ class PDGMQueryProgress {
     }
 
     async advanceStages() {
+        const requestId = this.requestId;
         for (let i = 0; i < this.progressStages.length; i++) {
-            if (this.currentRequest && this.currentRequest.aborted) {
+            if (requestId !== this.requestId || this.currentRequest?.signal.aborted) {
                 break;
             }
 
@@ -167,6 +174,7 @@ class PDGMQueryProgress {
             // Wait for stage duration
             await new Promise(resolve => setTimeout(resolve, this.progressStages[i].duration));
 
+            if (requestId !== this.requestId) return;
             // Mark stage as complete
             this.completeStage(i);
         }
@@ -232,7 +240,7 @@ class PDGMQueryProgress {
         return result;
     }
 
-    completeProgress(result) {
+    completeProgress(result, requestId = this.requestId) {
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
 
@@ -248,9 +256,15 @@ class PDGMQueryProgress {
 
         // Hide progress after a moment and show results
         setTimeout(() => {
+            if (requestId !== this.requestId) return;
             container.style.display = 'none';
             const selectedDate = document.getElementById('service-date')?.value;
             if (selectedDate && selectedDate !== result.diagnosis_data?.service_date) return;
+            if (result.selection_required) {
+                window.currentResults = null;
+                window.renderDiagnosisChoices(result);
+                return;
+            }
             window.currentResults = result;
 
             // Show the results section container
@@ -380,6 +394,7 @@ class PDGMQueryProgress {
     }
 
     cancelQuery() {
+        this.requestId = (this.requestId || 0) + 1;
         if (this.currentRequest) {
             this.currentRequest.abort();
         }
@@ -388,7 +403,7 @@ class PDGMQueryProgress {
         clearInterval(this.progressInterval);
 
         const container = document.getElementById('enhanced-progress-container');
-        container.style.display = 'none';
+        if (container) container.style.display = 'none';
 
         // Show main form
         const form = document.getElementById('pdgm-form');

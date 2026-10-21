@@ -48,7 +48,7 @@ def index():
     service_date = metadata['service_date']
 
     if request.method == 'POST':
-        query = request.form.get('query', '').strip()
+        query = (request.form.get('query') or request.form.get('diagnosis') or '').strip()
         if not query:
             flash('Query field is required.')
             return redirect(url_for('main.index'))
@@ -105,10 +105,8 @@ def index():
                        + '\nNext step: ' + flag['next_step'] for flag in assessment['flags']),
                       'FollowUp': ''}
         else:
-            ai_func = lambda _: get_cached_ai_response(full_query, service_date)
-            ai_response = ai_map_phrase_to_code_with_payment(ai_func, full_query)
-            follow_up = ai_followup_question(full_query)
-            result = {'AI': ai_response, 'FollowUp': follow_up}
+            from services.pdgm.rules_engine import lookup_pdgm
+            result = lookup_pdgm(full_query, service_date)
 
     return render_template(
         'index.html',

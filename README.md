@@ -425,3 +425,22 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture deep-dive.
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+### Plain-language diagnosis search
+
+Enter a condition name or a supported common term (for example, `heart failure`,
+`high blood pressure`, `CHF`, or `DM2`) in the diagnosis field. Suggestions use the
+verified ICD-10 descriptions for the selected Claim From date. Submitting a
+phrase shows up to 25 potential matches; select one to run the existing lookup,
+primary-diagnosis review, and payment workflow. Even a single match requires
+selection. Matches do not establish a diagnosis; confirm the full description
+against documentation. Refine broad searches with type, site, laterality, or
+complications. Spelling correction and arbitrary narrative interpretation are
+not supported by this deterministic search, and no AI API key is required.
+
+`POST /api/lookup` still accepts exact ICD-10 codes as before. For a phrase it
+returns `selection_required: true`, `query`, `candidates` (code/description), and
+`diagnosis_data`; it does not return an assigned diagnosis, eligibility, payment,
+or provider-clarification workflow until a code is submitted. An empty candidate
+list means no description matched, not that the clinical condition is invalid.
+`GET /api/suggest` shares the same search and date selection.

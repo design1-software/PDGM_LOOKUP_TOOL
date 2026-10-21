@@ -50,6 +50,9 @@ def api_lookup():
         payload = lookup_pdgm(query, v['service_date'])
         payload['diagnosis_data'] = diagnosis_metadata(v['service_date'])
 
+        if payload.get('selection_required'):
+            return jsonify(payload)
+
         from services.pdgm.eligibility import assess_primary_diagnosis
         assessment = assess_primary_diagnosis(payload.get('raw'))
         payload.update(assessment)
@@ -432,8 +435,10 @@ def api_offline_data():
 def api_suggest():
     try:
         q = request.args.get('q', '').strip()
-        if not q or len(q) < 3:
+        if not q or len(q) < 2:
             return jsonify({'success': True, 'suggestions': []})
+        if len(q) > 500:
+            return jsonify(error='Search must be 500 characters or fewer.'), 400
         from app import search_icd10_codes
         service_date = request.args.get('service_date')
         metadata = diagnosis_metadata(service_date)
