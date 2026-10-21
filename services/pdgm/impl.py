@@ -81,8 +81,6 @@ def parse_pdgm_details(text) -> dict:
             details["description"] = line.split(":", 1)[1].strip()
         elif low.startswith("comorbidity group:"):
             details["comorbidity_group"] = line.split(":", 1)[1].strip()
-        elif low.startswith("billable:"):
-            details["billable"] = line.split(":", 1)[1].strip()
         if len(details) >= 4:
             break
     return details

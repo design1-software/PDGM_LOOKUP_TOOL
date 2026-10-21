@@ -22,7 +22,6 @@ def _stub_external_modules():
             "Comorbidity Group: No_group\n"
             "Primary Awarding: 1\n"
             "Code First: 0\n"
-            "Billable: Yes\n"
             "Reason: Test"
         )
 

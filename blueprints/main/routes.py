@@ -4,7 +4,7 @@ from . import bp
 
 from app import (
     normalize_icd10, format_icd10, format_pdgm_group,
-    icd10_data, excluded_codes,
+    icd10_data,
     ai_map_phrase_to_code, ai_followup_question,
 )
 from services import cms_data
@@ -52,7 +52,6 @@ def index():
         icd_code = normalize_icd10(full_query)
         row = get_cached_icd10_data(icd_code)
         if row:
-            excluded = icd_code in excluded_codes
             focus = (
                 f"Focus of Care: {format_icd10(row['icd10_code'])} "
                 f"{row.get('description','')} "
@@ -70,7 +69,6 @@ def index():
                 f"PDGM Group: {format_pdgm_group(row.get('pdgm_clinical_group_name',''))}",
                 f"Comorbidity Group: {row.get('COMORBIDITY_GROUP','')}",
                 f"Code First: {row.get('CODE_FIRST','')}",
-                f"Billable: {'No (Section 111 Excluded)' if excluded else 'Yes'}",
             ]
             if unacceptable_pdx:
                 lines.append("Unacceptable PDx: Yes - This code cannot be used as a principal diagnosis")
