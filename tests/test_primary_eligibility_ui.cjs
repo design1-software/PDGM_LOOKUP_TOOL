@@ -116,6 +116,25 @@ test('an in-flight lookup for another date cannot restore stale results', () => 
     assert.equal(elements['enhanced-progress-container'].style.display, 'none');
 });
 
+test('technical lookup errors clear previous clinical actions and show retry/support guidance', () => {
+    const { context, elements } = harness();
+    context.document.readyState = 'loading';
+    vm.runInContext(fs.readFileSync(path.join(root, 'static/enhanced_query_progress.js'), 'utf8'), context);
+    let cleared = false;
+    context.window.clearProviderClarification = () => { cleared = true; };
+    context.window.currentResults = { icd10: 'M62.81' };
+    const message = { textContent: '' };
+    elements['enhanced-progress-container'] = { innerHTML: '', querySelector: () => message };
+    const handle = vm.runInContext('PDGMQueryProgress.prototype.handleError', context);
+    handle.call({}, { name: 'Error', status: 500, message: '<script>unsafe</script>' });
+    assert.equal(context.window.currentResults, null);
+    assert.equal(cleared, true);
+    assert.match(message.textContent, /Retry/);
+    assert.match(message.textContent, /application administrator/);
+    assert.doesNotMatch(message.textContent, /<script>/);
+    assert.match(message.textContent, /No provider clarification draft/);
+});
+
 test('diagnosis alerts show explanation and next step as text, with existing severity styling', () => {
     const { context, elements } = harness();
     context.displayResults({

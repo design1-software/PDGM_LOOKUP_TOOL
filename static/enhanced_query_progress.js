@@ -117,6 +117,10 @@ class PDGMQueryProgress {
     }
 
     startProgress(diagnosis) {
+        // Prior results/drafts must not survive a failed replacement lookup.
+        if (window.clearDiagnosisResultsForDateChange) window.clearDiagnosisResultsForDateChange();
+        else window.currentResults = null;
+        if (window.clearProviderClarification) window.clearProviderClarification();
         this.startTime = Date.now();
         this.currentStage = 0;
 
@@ -221,7 +225,9 @@ class PDGMQueryProgress {
 
         const result = await response.json();
         if (!response.ok) {
-            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            const failure = new Error(result.error || `HTTP error! status: ${response.status}`);
+            failure.status = response.status;
+            throw failure;
         }
         return result;
     }
@@ -340,17 +346,23 @@ class PDGMQueryProgress {
         clearTimeout(this.timeoutId);
         clearInterval(this.progressInterval);
 
+        window.currentResults = null;
+        if (window.clearProviderClarification) window.clearProviderClarification();
         const container = document.getElementById('enhanced-progress-container');
         container.innerHTML = `
             <div class="error-container">
                 <h3>Query Failed</h3>
-                <p class="error-message">${error.message && error.message !== 'Failed to fetch' ? error.message : 'An unexpected error occurred. Please try again.'}</p>
+                <p class="error-message"></p>
                 <div class="error-actions">
                     <button onclick="pdgmProgress.retryQuery()">Retry</button>
                     <button onclick="pdgmProgress.newQuery()">New Query</button>
                 </div>
             </div>
         `;
+        const verifyInput = error.status >= 400 && error.status < 500 && error.status !== 429;
+        container.querySelector('.error-message').textContent = verifyInput
+            ? `${error.message} Check the entry and Claim From date, then rerun the lookup. No provider request was prepared.`
+            : 'The lookup could not be completed. Retry; if the problem continues, contact your application administrator. No provider clarification draft was prepared.';
     }
 
     handleTimeout() {

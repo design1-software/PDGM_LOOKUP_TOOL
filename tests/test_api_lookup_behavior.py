@@ -48,6 +48,6 @@ def test_lookup_rejects_an_empty_query(client):
 
 
 def test_lookup_handles_an_unknown_code_without_erroring(client):
-    resp = client.post('/api/lookup', json={'query': 'ZZZZZ'})
+    resp = client.post('/api/lookup', json={'query': 'Z99.9999'})
     assert resp.status_code == 200
     assert resp.get_json() is not None

@@ -564,6 +564,7 @@
 
         // Submit query to backend
         async function submitQuery(diagnosis, areaCode = '') {
+            clearDiagnosisResultsForDateChange();
             const resultsSection = document.getElementById('results');
             const loading = document.getElementById('loading');
             const responseContent = document.getElementById('response-content');
@@ -773,6 +774,8 @@
                 responseContent.appendChild(flagsDiv);
             }
 
+            if (window.renderProviderClarification) window.renderProviderClarification(data);
+
             // Supply crosswalk
             if (window.getSupplyCrosswalk) {
                 var crosswalk = window.getSupplyCrosswalk(icd10);
@@ -784,6 +787,7 @@
         }
 
         function clearDiagnosisResultsForDateChange() {
+            if (window.clearProviderClarification) window.clearProviderClarification();
             window.currentResults = null;
             const results = document.getElementById('results');
             if (results) results.style.display = 'none';
@@ -1213,9 +1217,11 @@
         })();
     </script>
 
+    <script src="/static/provider_clarification.js?v=1"></script>
+
     <!-- Enhanced Loading Indicators -->
     <script src="/static/universal_navigation.js?v=5"></script>
-    <script src="/static/enhanced_query_progress.js?v=7"></script>
+    <script src="/static/enhanced_query_progress.js?v=8"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
     <script src="/static/hipps_calculator.js?v=4"></script>
