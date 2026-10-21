@@ -23,6 +23,20 @@ All figures come from the CY 2026 CMS Home Health PPS final rule (CMS-1828-F) an
 
 Not implemented: outlier payments, partial-period adjustments, dNPWT, and HHVBP adjustments.
 
+### Shared Primary-Diagnosis Validation
+`POST /api/lookup` and `POST /api/hipps` return the same `primary_eligibility`
+assessment and diagnosis `flags` from the loaded mapping. Unacceptable principal,
+manifestation, external-cause, missing-code, and missing/invalid clinical-group
+conditions block HIPPS generation. An unspecified-code warning alone does not
+block a code with an assigned clinical group. These checks do not establish
+coverage, billability, or complete coding compliance.
+
+Lookup keeps the diagnosis description and reasons visible but suppresses a
+payment range for blocked primary diagnoses. HIPPS returns HTTP 400 with the
+same reasons, without generating a HIPPS code or payment. The legacy direct-code
+page uses the same assessment. The calculator button is disabled for blocked or
+unverified results, and a new lookup clears any previous HIPPS/payment result.
+
 ### 3. Recertification Calculator
 - Input a Start of Care (SOC) date and episode length (default 60 days)
 - Calculates the recertification due date

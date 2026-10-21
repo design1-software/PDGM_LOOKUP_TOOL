@@ -620,6 +620,20 @@
             const responseContent = document.getElementById('response-content');
             const esc = escapeHtml;
 
+            // A new lookup invalidates any previous HIPPS/payment result.
+            const hippsResult = document.getElementById('hipps-result');
+            if (hippsResult) {
+                hippsResult.innerHTML = '';
+                hippsResult.style.display = 'none';
+            }
+            const hippsButton = document.getElementById('btn-calc-hipps');
+            if (hippsButton) {
+                hippsButton.disabled = data.primary_eligibility?.eligible !== true;
+                hippsButton.textContent = 'Calculate HIPPS Code';
+                hippsButton.title = hippsButton.disabled
+                    ? 'Review the primary-diagnosis alerts before calculating HIPPS.' : '';
+            }
+
             const icd10 = data.icd10 || data.icd_code || 'Not specified';
             const pdgmGroup = data.raw?.pdgm_clinical_group_name || data.pdgm_group || 'Not determined';
             const description = data.raw?.description || data.description || 'No description available';
@@ -1153,7 +1167,7 @@
     <script src="/static/enhanced_query_progress.js?v=6"></script>
     <script src="/static/fixed_interactive_followup.js?v=4"></script>
     <script src="/static/loading-improvements.js?v=4"></script>
-    <script src="/static/hipps_calculator.js?v=2"></script>
+    <script src="/static/hipps_calculator.js?v=3"></script>
     <script src="/static/supply_crosswalk.js?v=1"></script>
     <script src="/static/comparison_mode.js?v=1"></script>
     <script src="/static/animations.js?v=3"></script>

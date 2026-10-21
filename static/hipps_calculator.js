@@ -177,6 +177,11 @@
             return;
         }
 
+        if (data.primary_eligibility?.eligible !== true) {
+            alert('This diagnosis cannot be used for HIPPS calculation. Review the diagnosis alerts.');
+            return;
+        }
+
         const btn = document.getElementById('btn-calc-hipps');
         btn.disabled = true;
         btn.textContent = 'Calculating...';
@@ -201,6 +206,8 @@
         })
             .then(r => r.json())
             .then(result => {
+                // Ignore a calculation for a diagnosis the user has since replaced.
+                if (window.currentResults !== data) return;
                 btn.disabled = false;
                 btn.textContent = 'Calculate HIPPS Code';
                 if (result.error) {
@@ -210,6 +217,7 @@
                 renderHIPPSResult(result);
             })
             .catch(() => {
+                if (window.currentResults !== data) return;
                 btn.disabled = false;
                 btn.textContent = 'Calculate HIPPS Code';
                 alert('HIPPS calculation failed.');
