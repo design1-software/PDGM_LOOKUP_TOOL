@@ -57,6 +57,39 @@ Guidance directs staff to review existing documentation before requesting provid
 clarification and does not infer a replacement diagnosis. Provider-request generation,
 changes to code-search fallback behavior, and diagnosis-data refresh are separate work.
 
+### Provider Clarification Workflow
+
+Lookup returns `clarification_workflow`, which follows the actual mapping issue:
+
+| Result | Workflow |
+|---|---|
+| Unacceptable primary, missing clinical group, or external cause | Review the record for the condition responsible for services; request clarification only if still unclear. |
+| Manifestation or code-first entry | Review underlying-condition documentation and sequencing; confirm applicability of a Code first instruction before preparing a template. |
+| Unspecified flag | Staff select the missing detail (type, site, laterality, acuity, severity/stage, complications, or other condition detail). A warning does not make every unspecified code invalid. |
+| Unresolved code or unsupported date | Verify the code/date and rerun; no clinical template is offered. |
+| Technical failure, including AI unavailability | Retry/support guidance; prior drafts are cleared and no clinical template is prepared. |
+
+`POST /api/provider-clarification` rechecks the exact code and date against the
+verified release and derives allowed issues on the server. It requires explicit
+record-review and continuing-need confirmations, plus the applicable sequencing
+review or missing-detail selection. It accepts only code/date/issue and review
+selections; clinical text, patient identifiers, and client-supplied flags are not
+accepted. The existing lead gate and rate limits apply.
+
+The result is an **incomplete template**, not an automatically compliant query.
+Staff add relevant current documentation and clinical indicators with their
+sources/dates in the browser, then review the wording before Copy or Print is
+enabled. Edits are not sent back to this endpoint or saved by this feature.
+There is no sending function, recipient lookup, patient record, or draft history.
+Changing the code/date or review selections invalidates previous drafts.
+
+The open-ended wording does not suggest a replacement diagnosis or mention
+payment, and allows an indeterminate or inapplicable response. Review against
+organizational policy remains necessary. Design reference:
+[AHIMA/ACDIS Guidelines for Achieving a Compliant Query Practice, 2026](https://bok.ahima.org/media/zc0bqdjt/2026_acdis-ahima_compliant-query-practice.pdf).
+The application cannot assess whether the complete clinical record supports a
+query; that remains a staff review task.
+
 ### 3. Recertification Calculator
 - Input a Start of Care (SOC) date and episode length (default 60 days)
 - Calculates the recertification due date
@@ -107,7 +140,7 @@ pip install pytest
 pytest tests/ -q
 ```
 
-Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (see `tests/conftest.py`). Run with `ANTHROPIC_API_KEY='' python -m pytest -q`; JavaScript behavior checks run with `node --test tests/test_primary_eligibility_ui.cjs`.
+Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (see `tests/conftest.py`). Run with `ANTHROPIC_API_KEY='' python -m pytest -q`; JavaScript behavior checks run with `node --test tests/*_ui.cjs`.
 
 ---
 

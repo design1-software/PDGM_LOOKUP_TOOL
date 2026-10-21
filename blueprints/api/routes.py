@@ -1,4 +1,5 @@
 from services.pdgm.datasets import diagnosis_metadata, DiagnosisDateError, DiagnosisDataError
+from services.pdgm.clarification import clarification_workflow, blocked_workflow, prepare_template, ClarificationError
 from flask import jsonify, current_app, request, session
 from schemas.pdgm import (
     ValidationError, validate_lookup_request, validate_roadmap_request,
@@ -52,6 +53,7 @@ def api_lookup():
         from services.pdgm.eligibility import assess_primary_diagnosis
         assessment = assess_primary_diagnosis(payload.get('raw'))
         payload.update(assessment)
+        payload['clarification_workflow'] = clarification_workflow(payload.get('raw'))
 
         # Payment range when an area is supplied. A diagnosis fixes the clinical
         # group but not the functional level, admission source/timing, or
@@ -78,10 +80,47 @@ def api_lookup():
 
         return jsonify(payload)
     except (ValidationError, DiagnosisDateError) as ve:
-        return jsonify({'error': str(ve)}), 400
+        return jsonify(error=str(ve), clarification_workflow=blocked_workflow(
+            'verify_input', 'Check the entry and Claim From date, then rerun the lookup.')), 400
     except Exception as e:
         current_app.logger.error(f'/api/lookup error: {e}')
-        return jsonify({'error': 'lookup failed'}), 500
+        return jsonify(error='lookup failed', clarification_workflow=blocked_workflow(
+            'technical_failure', 'Retry the lookup. If the problem continues, contact your '
+            'application administrator. No provider clarification draft was prepared.')), 500
+
+
+@bp.post('/api/provider-clarification')
+@limiter.limit('10 per minute; 50 per hour')
+@require_lead_capture
+def api_provider_clarification():
+    """Prepare a template from a freshly verified code/date, never patient text."""
+    try:
+        body = request.get_json(silent=True)
+        allowed = {'icd10', 'service_date', 'issue', 'documentation_reviewed',
+                   'clarification_needed', 'instruction_reviewed', 'missing_detail'}
+        if not isinstance(body, dict) or set(body) - allowed:
+            raise ClarificationError('Use only the code, date, issue, and review selections from the lookup.')
+        if not isinstance(body.get('icd10'), str) or not 3 <= len(body['icd10']) <= 10:
+            raise ClarificationError('A verified ICD-10 code is required.')
+        if not body.get('service_date'):
+            raise ClarificationError('Use the Claim From date from the verified lookup.')
+        if body.get('missing_detail') is not None and not isinstance(body['missing_detail'], str):
+            raise ClarificationError('Select a missing-detail option.')
+        from services.pdgm.repository import get_icd10_map, normalize_icd10
+        metadata = diagnosis_metadata(body['service_date'])
+        row = get_icd10_map(metadata['service_date']).get(normalize_icd10(body['icd10']))
+        workflow = clarification_workflow(row)
+        if not workflow['can_prepare']:
+            return jsonify(error=workflow['message'], clarification_workflow=workflow), 400
+        draft = prepare_template(row, body)
+        return jsonify(draft=draft, diagnosis_data=metadata, clarification_workflow=workflow)
+    except (ClarificationError, DiagnosisDateError) as e:
+        return jsonify(error=str(e)), 400
+    except Exception:
+        current_app.logger.error('/api/provider-clarification failed')
+        return jsonify(error='Template preparation failed. Retry or contact your application administrator.',
+                       clarification_workflow=blocked_workflow('technical_failure',
+                       'No provider clarification draft was prepared.')), 500
 
 
 @bp.post('/api/roadmap')
