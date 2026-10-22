@@ -1,17 +1,31 @@
-flask
-flask-limiter[redis]>=3.5
-flask-sqlalchemy
-flask-migrate
+# Pinned 2026-10-22. Every version below was verified together on Python 3.11
+# (the Dockerfile runtime): the app boots under `gunicorn --preload` and the
+# full suite passes 177/177.
+#
+# Why pin: Railway rebuilds the image from scratch on every deploy, so an
+# unpinned file means the source that built in July resolves to different
+# libraries in October. That makes a deploy failure impossible to attribute --
+# the commit looks identical, only the resolved tree moved. Two of these had
+# already crossed a major version (anthropic 1.x -> 2.1.0,
+# flask-limiter 3.x -> 4.1.1) while the deploy sat frozen.
+#
+# To upgrade: bump the pin, run the suite on 3.11, and confirm the app boots
+# before merging. Do not loosen a pin to resolve a conflict.
+
+flask==3.1.3
+werkzeug==3.1.9
+flask-limiter[redis]==4.1.1
+flask-sqlalchemy==3.1.1
+flask-migrate==4.1.0
 flask-login==0.6.3
 flask-mail==0.9.1
-flask-caching
-gunicorn
-anthropic
-openpyxl
+flask-caching==2.5.1
+gunicorn==26.2.0
+anthropic==2.1.0
+openpyxl==3.1.5
 marshmallow==3.20.1
-werkzeug
-psycopg2-binary
-python-dotenv
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
 sentry-sdk[flask]==1.40.0
 email-validator==2.0.0
-tzdata
+tzdata==2026.5
