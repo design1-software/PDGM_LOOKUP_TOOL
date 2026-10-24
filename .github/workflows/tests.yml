@@ -22,13 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 3.11 to match the Dockerfile (`FROM python:3.11-slim`), which is what
-      # Railway actually builds. runtime.txt claims 3.12.7 and is ignored when
-      # a Dockerfile is present -- testing against it would make a green check
-      # mean nothing.
+      # Exact patch, matching the Dockerfile base image and runtime.txt. All
+      # three now name the same interpreter, so a green check here is evidence
+      # about the version production actually runs.
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11.17'
           cache: pip
           cache-dependency-path: |
             requirements.txt
