@@ -261,7 +261,9 @@ docker run -p 8080:8080 \
   pdgm-lookup
 ```
 
-The image uses Python 3.11-slim with Gunicorn (2 workers, 2 threads, 120s timeout). Health check endpoint is `GET /healthz`.
+The image uses Python 3.11.17-slim with Gunicorn (2 workers, 2 threads, 120s timeout). Health check endpoint is `GET /healthz`.
+
+The Dockerfile is the authoritative runtime. Railway builds with it when one is present at the repo root, so its `CMD` — not the `Procfile` — is what starts the app. `runtime.txt`, the Dockerfile base image, and the CI matrix all name the same exact interpreter so the declared runtime matches the real one.
 
 ### Without Docker
 
