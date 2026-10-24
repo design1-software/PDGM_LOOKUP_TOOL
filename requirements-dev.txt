@@ -1,0 +1,9 @@
+# Test-only dependencies. Not installed into the production image -- the
+# Dockerfile installs requirements.txt alone.
+#
+# Pinned for the same reason as requirements.txt: CI that silently changes
+# its own test runner is CI you cannot trust to mean anything.
+
+-r requirements.txt
+
+pytest==9.1.1
