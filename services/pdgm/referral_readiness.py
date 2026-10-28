@@ -159,6 +159,26 @@ PRACTITIONERS = {
     "other": "Other / not sure",
 }
 
+# Where the main diagnosis appears in the face-to-face note. The encounter must
+# be related to the primary reason for home health (42 CFR 424.22(a)(1)(v)),
+# and the provider ties a diagnosis to the encounter in Assessment/Plan.
+DX_LOCATIONS = {
+    "assessment_plan": "Assessment/Plan",
+    "hpi_only": "HPI only, not in Assessment/Plan",
+    "mismatch": "HPI and Assessment/Plan disagree",
+    "pmh_only": "Past medical history only",
+    "not_in_note": "Not in the note at all",
+    "unsure": "Not sure",
+}
+# Older API clients sent a yes/no/unsure "related" answer.
+_LEGACY_RELATED = {"yes": "assessment_plan", "no": "not_in_note", "unsure": "unsure"}
+
+_NEW_VISIT_ASK = (
+    "If the visit did not address the condition home health will treat, the patient needs a "
+    "face-to-face visit (in person or telehealth) that does, documented with that diagnosis in the "
+    "Assessment/Plan. If it was addressed but left out of the note, can the provider document it?"
+)
+
 HOMEBOUND_C1 = {
     "device": "Needs a cane, walker, wheelchair or crutches to leave home",
     "assistance": "Needs another person's help to leave home",
@@ -377,7 +397,7 @@ def check_event(event, event_date, soc):
     return _check("event", title, status, findings, asks)
 
 
-def check_face_to_face(f2f_date, practitioner, related, soc):
+def check_face_to_face(f2f_date, practitioner, dx_location, soc):
     title = "Face-to-face encounter"
     findings, asks = [], []
     status = GREEN
@@ -413,13 +433,38 @@ def check_face_to_face(f2f_date, practitioner, related, soc):
     else:
         findings.append("Performed by: %s." % PRACTITIONERS[practitioner])
 
-    if related == "no":
-        findings.append("The visit was not about the reason for home health. The encounter must be related to the primary reason for home care.")
-        asks.append("The face-to-face note needs to address the condition home health will treat. Can the practitioner add that, or see the patient for it?")
+    dx_location = _LEGACY_RELATED.get(dx_location, dx_location)
+    if dx_location == "assessment_plan":
+        findings.append("The diagnosis is in the Assessment/Plan: the provider tied it to this encounter.")
+    elif dx_location == "hpi_only":
+        findings.append("The problem is discussed in the HPI, but no diagnosis is named in the Assessment/Plan. "
+                        "The Assessment/Plan is where the provider ties a diagnosis to the encounter.")
+        asks.append("The visit note discusses the problem but does not name a diagnosis in the Assessment/Plan. "
+                    "Can the provider document the diagnosis being treated there, for example by a signed addendum?")
+        status = RED if status == RED else YELLOW
+    elif dx_location == "mismatch":
+        findings.append("The HPI and the Assessment/Plan point to different problems. The provider needs to "
+                        "make clear which diagnosis is the reason for home health.")
+        asks.append("The HPI and the Assessment/Plan describe different problems. Which diagnosis is the reason "
+                    "for home health? Please document it in the Assessment/Plan.")
+        status = RED if status == RED else YELLOW
+    elif dx_location == "pmh_only":
+        findings.append("A condition listed only in past medical history was not addressed in this encounter, "
+                        "so the face-to-face does not support it as the reason for home health, even if the "
+                        "patient still struggles with it. It may still be a secondary diagnosis if the record "
+                        "shows it affects care.")
+        asks.append(_NEW_VISIT_ASK)
         status = RED
-    elif related != "yes":
-        findings.append("Confirm the visit note addresses the reason for home health.")
-        asks.append("Does the face-to-face visit note address the condition home health will treat?")
+    elif dx_location == "not_in_note":
+        findings.append("The visit note does not mention the reason for home health. The encounter must be "
+                        "related to the primary reason for home care.")
+        asks.append(_NEW_VISIT_ASK)
+        status = RED
+    else:
+        findings.append("Check where the diagnosis appears in the note: it should be in the Assessment/Plan, "
+                        "not only in the HPI or past medical history.")
+        asks.append("Where in the face-to-face note is the condition home health will treat documented? "
+                    "It should appear in the Assessment/Plan.")
         status = RED if status == RED else YELLOW
     return _check("f2f", title, status, findings, asks)
 
@@ -498,7 +543,8 @@ def evaluate(data, today=None):
         # A tapped code choice takes precedence over the typed code field.
         check_diagnosis(get("diagnosis"), get("icd10_choice") or get("icd10_code"), icd10_data, data_error),
         check_event(get("event"), get("event_date"), soc),
-        check_face_to_face(get("f2f_date"), get("f2f_practitioner"), get("f2f_related"), soc),
+        check_face_to_face(get("f2f_date"), get("f2f_practitioner"),
+                           get("f2f_dx_location") or get("f2f_related"), soc),
         check_homebound(_multi(data, "homebound_c1"), _multi(data, "homebound_c2"), get("homebound_notes")),
         check_skilled_need(_multi(data, "services"), get("skilled_reason")),
     ]

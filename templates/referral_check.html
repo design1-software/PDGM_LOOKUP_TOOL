@@ -108,6 +108,15 @@
             cursor: pointer;
         }
         .rr-muted { color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem; }
+        .rr-link { color: var(--accent); }
+        /* Keep the guide's title clear of the sticky header when jumped to. */
+        #f2f-guide, #results { scroll-margin-top: 160px; }
+        .rr-guide summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; color: var(--text-primary); }
+        .rr-guide[open] summary { margin-bottom: 0.75rem; }
+        .rr-guide h3 { font-size: 0.95rem; margin: 1rem 0 0.35rem; color: var(--accent); }
+        .rr-guide ol, .rr-guide ul { margin: 0.25rem 0 0 1.2rem; line-height: 1.55; font-size: 0.93rem; }
+        .rr-guide li { margin-bottom: 0.4rem; }
+        .rr-guide p { line-height: 1.55; font-size: 0.93rem; }
         .rr-choices { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
         .rr-choice-btn {
             display: grid;
@@ -204,6 +213,30 @@
             <p class="rr-phi">{{ phi_notice }}</p>
         </section>
 
+        <details class="rr-card rr-guide" id="f2f-guide">
+            <summary>How to read a face-to-face note</summary>
+            <p class="rr-sub">Every facility and provider lays the note out differently, but the same three sections tell you whether it supports home health.</p>
+            <ol>
+                <li><strong>HPI (history of present illness).</strong> Why the patient was seen this time: the story of the current problem. Find the problem that home health will treat.</li>
+                <li><strong>Assessment/Plan.</strong> Where the provider names the diagnosis and says what will be done about it. <em>This is where the reason for home health needs to appear.</em></li>
+                <li><strong>Past medical history.</strong> Conditions the patient has or has had. Being on this list does not mean the condition was addressed in this visit.</li>
+            </ol>
+            <h3>The rule</h3>
+            <p>The face-to-face visit must be related to the primary reason the patient needs home health. If a condition appears only in past medical history and was not discussed in this visit, the note does not support it as the reason for home health, even if the patient still struggles with it. It can still be a secondary diagnosis if the record shows it affects care.</p>
+            <h3>What to do</h3>
+            <ul>
+                <li><strong>Discussed in the HPI but no diagnosis in the Assessment/Plan:</strong> ask the provider to document the diagnosis in the Assessment/Plan, for example by a signed addendum.</li>
+                <li><strong>HPI and Assessment/Plan disagree:</strong> ask the provider which diagnosis is the reason for home health.</li>
+                <li><strong>Only in past medical history, or not in the note at all:</strong> ask whether the visit actually addressed it. If it did not, the patient needs a new face-to-face visit that does, no more than 90 days before or 30 days after the start of care. In person or telehealth both count.</li>
+                <li><strong>Never</strong> edit a provider's note, or ask a provider to document something that was not addressed in the visit.</li>
+            </ul>
+            <h3>Also check</h3>
+            <ul>
+                <li>The visit date is within 90 days before or 30 days after the start of care.</li>
+                <li>It was performed by a physician, nurse practitioner, physician assistant, clinical nurse specialist or certified nurse-midwife.</li>
+            </ul>
+        </details>
+
         <form method="post" action="{{ url_for('referral.check') }}#results" class="rr-card" id="rr-form">
             <fieldset>
                 <legend>1. Why home health?</legend>
@@ -253,12 +286,11 @@
                         </select>
                     </div>
                 </div>
-                <p class="rr-group">Does the visit note address the reason for home health?</p>
-                <div class="rr-radios">
-                    {% for value, label in [('yes', 'Yes'), ('no', 'No'), ('unsure', 'Not sure')] %}
-                    <label class="rr-choice"><input type="radio" name="f2f_related" value="{{ value }}" {% if form.get('f2f_related') == value %}checked{% endif %}> {{ label }}</label>
-                    {% endfor %}
-                </div>
+                <p class="rr-group">Where does the main diagnosis appear in the note?</p>
+                <p class="rr-hint">Look in the Assessment/Plan first. <a href="#f2f-guide" class="rr-link">How to read a face-to-face note</a></p>
+                {% for value, label in options.dx_locations.items() %}
+                <label class="rr-choice"><input type="radio" name="f2f_dx_location" value="{{ value }}" {% if form.get('f2f_dx_location') == value %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
             </fieldset>
 
             <fieldset>
@@ -290,6 +322,15 @@
         </form>
     </main>
 
+    <script>
+        // Links to the face-to-face guide open it, not just scroll to it.
+        document.querySelectorAll('a[href="#f2f-guide"]').forEach(function (link) {
+            link.addEventListener('click', function () {
+                document.getElementById('f2f-guide').open = true;
+            });
+        });
+        if (location.hash === '#f2f-guide') document.getElementById('f2f-guide').open = true;
+    </script>
     <script>
         (function () {
             function flash(btn, text) {

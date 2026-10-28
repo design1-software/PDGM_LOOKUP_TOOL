@@ -9,6 +9,7 @@ def _options():
     return {
         'events': referral_readiness.EVENTS,
         'practitioners': referral_readiness.PRACTITIONERS,
+        'dx_locations': referral_readiness.DX_LOCATIONS,
         'homebound_c1': referral_readiness.HOMEBOUND_C1,
         'homebound_c2': referral_readiness.HOMEBOUND_C2,
         'services': referral_readiness.SERVICES,
