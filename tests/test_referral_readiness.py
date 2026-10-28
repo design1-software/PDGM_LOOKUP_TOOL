@@ -21,7 +21,7 @@ def ready_referral(**overrides):
         'soc_date': SOC,
         'f2f_date': '2026-10-19',
         'f2f_practitioner': 'physician',
-        'f2f_related': 'yes',
+        'f2f_dx_location': 'assessment_plan',
         'homebound_c1': ['device'],
         'homebound_c2': ['normal_inability', 'taxing_effort'],
         'services': ['sn', 'pt'],
@@ -160,8 +160,40 @@ def test_face_to_face_window(f2f_date, status):
     assert by_key(run(f2f_date=f2f_date))['f2f']['status'] == status
 
 
-def test_face_to_face_unrelated_is_red():
-    assert by_key(run(f2f_related='no'))['f2f']['status'] == rr.RED
+@pytest.mark.parametrize('location,status,ask_fragment', [
+    ('assessment_plan', rr.GREEN, None),
+    ('hpi_only', rr.YELLOW, 'signed addendum'),
+    ('mismatch', rr.YELLOW, 'Which diagnosis is the reason'),
+    ('pmh_only', rr.RED, 'needs a face-to-face visit'),
+    ('not_in_note', rr.RED, 'needs a face-to-face visit'),
+    ('unsure', rr.YELLOW, 'Assessment/Plan'),
+    (None, rr.YELLOW, 'Assessment/Plan'),
+])
+def test_where_the_diagnosis_appears_in_the_note(location, status, ask_fragment):
+    f2f = by_key(run(f2f_dx_location=location))['f2f']
+    assert f2f['status'] == status
+    if ask_fragment:
+        assert any(ask_fragment in a for a in f2f['asks'])
+    else:
+        assert f2f['asks'] == []
+
+
+def test_past_medical_history_explains_the_rule():
+    findings = by_key(run(f2f_dx_location='pmh_only'))['f2f']['findings']
+    assert any('past medical history was not addressed in this encounter' in f for f in findings)
+    assert any('secondary diagnosis' in f for f in findings)
+
+
+def test_pmh_ask_never_suggests_documenting_what_was_not_addressed():
+    asks = by_key(run(f2f_dx_location='pmh_only'))['f2f']['asks']
+    assert not any('addendum' in a for a in asks)
+
+
+@pytest.mark.parametrize('legacy,status', [('yes', rr.GREEN), ('no', rr.RED), ('unsure', rr.YELLOW)])
+def test_legacy_related_answers_still_work(legacy, status):
+    data = ready_referral(f2f_related=legacy)
+    del data['f2f_dx_location']
+    assert by_key(rr.evaluate(data, today=TODAY))['f2f']['status'] == status
 
 
 def test_homebound_is_informational_and_never_blocks():
@@ -214,6 +246,13 @@ def test_choice_buttons_render_and_submit_the_code(anon_client):
     response = anon_client.post('/referral-check', data={'diagnosis': 'CHF exacerbation',
                                                          'icd10_choice': 'I50.23'})
     assert b'value="I50.23" autocapitalize' in response.data
+
+
+def test_page_has_the_note_question_and_guide(anon_client):
+    page = anon_client.get('/referral-check').data
+    assert b'name="f2f_dx_location" value="pmh_only"' in page
+    assert b'id="f2f-guide"' in page
+    assert b'How to read a face-to-face note' in page
 
 
 def test_page_works_without_lead_capture(anon_client):
