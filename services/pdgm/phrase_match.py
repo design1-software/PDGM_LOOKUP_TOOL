@@ -52,6 +52,12 @@ REFERRAL_ALIASES = {
     'parkinsons': 'parkinson',
     'alzheimers': 'alzheimer',
     'diabetic': 'diabetes',
+    'pressure sore': 'pressure ulcer',
+    'pressure injury': 'pressure ulcer',
+    'bed sore': 'pressure ulcer',
+    'bedsore': 'pressure ulcer',
+    'decubitus': 'pressure ulcer',
+    'sore': 'ulcer',
     'left side weakness': 'hemiplegia left',
     'right side weakness': 'hemiplegia right',
     'left sided weakness': 'hemiplegia left',
@@ -98,7 +104,8 @@ DESCRIPTION_ABBREVIATIONS = {
     'humer': 'humerus', 'rad': 'radius', 'musc': 'muscle', 'tend': 'tendon',
     'inj': 'injury', 'athscl': 'atherosclerosis', 'cereb': 'cerebral',
     'hemorrh': 'hemorrhage', 'intcrn': 'intracranial', 'ulc': 'ulcer',
-    'r': 'right', 'l': 'left', 'nk': 'neck', 'chr': 'chronic',
+    'r': 'right', 'l': 'left', 'nk': 'neck', 'chr': 'chronic', 'prs': 'pressure',
+    'severt': 'severity', 'complic': 'complications',
     'diab': 'diabetes', 'traum': 'traumatic', 'lacerat': 'laceration',
     'physl': 'physeal', 'insrt': 'insertion', 'implnt': 'implant', 'sltr': 'salter',
     'sedatv': 'sedative', 'hyp': 'hypnotic', 'anxiolytc': 'anxiolytic',
@@ -175,13 +182,21 @@ def match_primary(phrase, data, limit=5):
     modifiers = set(words) - core_set
     wants_exacerbation = 'exacerbation' in modifiers
     allow_chapters = bool(_CHAPTER_WORDS & set(words))
+    phrase_text = ' '.join(words)
+    diabetes_untyped = 'diabete' in core_set and not re.search(r'\btype [0-9]', phrase_text)
     # A short phrase with no detail ("sepsis") is best matched by the
     # unspecified code first, with specific variants after it.
-    vague = len(core_set) <= 2 and not (modifiers - {'with', 'of', 'the', 'and', 'a', 'an'})
+    vague = len(core_set) <= 2 and not (modifiers - {'with', 'of', 'the', 'and', 'a', 'an', 'type'})
+    # "Non-pressure chronic ulcer" contains the word "pressure": keep pressure
+    # and non-pressure ulcers apart in both directions.
+    wants_pressure = 'pressure' in core_set
+    wants_non_pressure = wants_pressure and re.search(r'\bnon pressure\b', phrase_text) is not None
 
     ranked = []
     for code, row, tokens, text in _index(data):
         if not core_set <= tokens:
+            continue
+        if wants_pressure and ('non pressure' in text) != wants_non_pressure:
             continue
         bonus = len(modifiers & tokens)
         if wants_exacerbation:
@@ -191,6 +206,12 @@ def match_primary(phrase, data, limit=5):
                 bonus += 2
         if vague and 'unspecified' in tokens:
             bonus += 1
+        # A bare condition ("diabetes") leads with its uncomplicated code.
+        if vague and 'without complications' in text:
+            bonus += 2
+        # ICD-10-CM I.C.4.a.2: diabetes of unstated type defaults to type 2.
+        if diabetes_untyped and code.startswith('E11'):
+            bonus += 2
         if code[0] in _EXCLUDED_CHAPTERS and not allow_chapters:
             continue
         narrowing = len((NARROWING_WORDS & tokens) - set(words))

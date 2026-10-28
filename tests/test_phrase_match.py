@@ -27,6 +27,13 @@ def mapping():
     ('afib', 'I48.91'),
     ('hypertension', 'I10'),
     ('pulmonary hypertension', 'I27.20'),
+    ('diabetes', 'E11.9'),
+    ('type 2 diabetes', 'E11.9'),
+    ('diabetes and a foot sore', 'E11.621'),
+    ('diabetic with foot sore', 'E11.621'),
+    ('diabetic foot ulcer', 'E11.621'),
+    ('type 1 diabetes foot ulcer', 'E10.621'),
+    ('pressure sore sacrum stage 3', 'L89.153'),
 ])
 def test_first_choice(mapping, phrase, expected_first):
     choices = match_primary(phrase, mapping)
@@ -65,3 +72,15 @@ def test_obstetric_and_newborn_codes_only_when_asked(mapping):
 def test_symptoms_and_non_grouping_conditions_offer_nothing(mapping):
     for phrase in ['generalized weakness', 'unsteady gait', 'end stage renal disease', 'needs help at home']:
         assert match_primary(phrase, mapping) == [], phrase
+
+
+def test_pressure_and_non_pressure_ulcers_stay_apart(mapping):
+    for phrase in ['bed sore', 'pressure ulcer', 'pressure sore heel']:
+        codes = [c['code'] for c in match_primary(phrase, mapping)]
+        assert codes and all(c.startswith('L89') for c in codes), (phrase, codes)
+    codes = [c['code'] for c in match_primary('non pressure ulcer right foot', mapping)]
+    assert codes and all(c.startswith('L97') for c in codes), codes
+
+
+def test_sore_throat_is_not_an_ulcer(mapping):
+    assert match_primary('sore throat', mapping) == []
