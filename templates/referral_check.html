@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referral Readiness Check - PDGM Lookup Tool</title>
+    <meta name="description" content="Check a home health referral before it goes to intake: PDGM primary diagnosis, why now, face-to-face, homebound status and skilled need.">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v=2">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.svg') }}?v=2">
+    <link rel="canonical" href="{{ url_for('referral.check', _external=True) }}">
+
+    <!-- Shared stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cross_browser_compatibility.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clinical_theme.css') }}?v=1">
+
+    <style>
+        .rr-wrap { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+        .rr-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: var(--shadow-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            color: var(--text-primary);
+        }
+        .rr-title { font-family: var(--font-heading); font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 600; margin-bottom: 0.5rem; }
+        .rr-sub { color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.55; }
+        .rr-phi {
+            border: 1px solid var(--amber);
+            background: var(--amber-glow);
+            color: var(--text-primary);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+        }
+        .rr-card fieldset { border: none; margin: 0 0 1.5rem; padding: 0; }
+        .rr-card legend { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--text-primary); }
+        .rr-hint { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem; }
+        .rr-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); margin: 0.85rem 0 0.35rem; }
+        .rr-group { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-top: 0.9rem; }
+        .rr-input {
+            width: 100%;
+            padding: 0.75rem;
+            font: inherit;
+            font-size: 1rem;
+            color: var(--text-primary);
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        .rr-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+        textarea.rr-input { min-height: 72px; resize: vertical; }
+        .rr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .rr-choice { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.4rem 0; font-size: 0.95rem; color: var(--text-primary); }
+        .rr-choice input { margin-top: 0.25rem; width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+        .rr-radios { display: flex; flex-wrap: wrap; gap: 0 1.25rem; }
+        .rr-overall { display: flex; gap: 0.75rem; align-items: center; font-weight: 600; font-size: 1.1rem; }
+        .rr-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+        .rr-green .rr-dot, .rr-check.rr-green { --status: #22C55E; }
+        .rr-yellow .rr-dot, .rr-check.rr-yellow { --status: var(--amber); }
+        .rr-red .rr-dot, .rr-check.rr-red { --status: #F87171; }
+        .rr-dot { background: var(--status); }
+        .rr-check {
+            border-left: 4px solid var(--status);
+            background: var(--bg-section);
+            border-radius: 4px;
+            padding: 0.9rem 1rem;
+            margin-top: 0.85rem;
+        }
+        .rr-check h3 { font-size: 1rem; display: flex; justify-content: space-between; gap: 0.5rem; color: var(--text-primary); }
+        .rr-badge { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--status); }
+        .rr-check ul { margin: 0.4rem 0 0 1.1rem; font-size: 0.92rem; color: var(--text-primary); line-height: 1.5; }
+        .rr-message {
+            white-space: pre-wrap;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            font-size: 0.92rem;
+            margin: 0.75rem 0;
+            color: var(--text-primary);
+        }
+        .rr-copy {
+            padding: 0.6rem 1rem;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: transparent;
+            cursor: pointer;
+        }
+        .rr-muted { color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem; }
+        .rr-wrap .btn-submit { width: 100%; }
+        @media (max-width: 560px) {
+            .rr-row { grid-template-columns: 1fr; }
+            .rr-card { padding: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo-section">
+            <img src="{{ url_for('static', filename='pdgm_logo.png') }}" alt="PDGM Lookup Tool" class="header-logo">
+        </div>
+        <a href="{{ url_for('main.index') }}" class="btn-submit" style="padding: 0.5rem 1.5rem; width: auto; font-size: 0.875rem; border-radius: 1.5rem; text-decoration: none;">PDGM Tool</a>
+    </header>
+
+    <main class="rr-wrap">
+        {% if result %}
+        <section class="rr-card" id="results" aria-live="polite">
+            <div class="rr-overall rr-{{ result.overall }}">
+                <span class="rr-dot"></span>
+                {% if result.overall == 'green' %}Ready to send to intake
+                {% elif result.overall == 'yellow' %}Almost ready: confirm the items below
+                {% else %}Not ready: get the items below from the referral source{% endif %}
+            </div>
+            {% for c in result.checks %}
+            <div class="rr-check rr-{{ c.status }}">
+                <h3>{{ c.title }} <span class="rr-badge">{{ {'green': 'OK', 'yellow': 'Check', 'red': 'Missing'}[c.status] }}</span></h3>
+                <ul>{% for f in c.findings %}<li>{{ f }}</li>{% endfor %}</ul>
+            </div>
+            {% endfor %}
+
+            {% if result.message %}
+            <h3 style="margin-top:1.5rem">Message for the referral source</h3>
+            <div class="rr-message" id="rr-message">{{ result.message }}</div>
+            <button type="button" class="rr-copy" id="rr-copy">Copy message</button>
+            {% endif %}
+            <p class="rr-muted">
+                Planned start of care used for date checks: {{ result.soc_date }}.
+                {% if result.diagnosis_data %}Diagnosis mapping: PDGM grouper {{ result.diagnosis_data.grouper_version }}.{% endif %}
+                Intake makes the final decision on every referral.
+            </p>
+        </section>
+        {% endif %}
+
+        <section class="rr-card">
+            <h1 class="rr-title">Referral Readiness Check</h1>
+            <p class="rr-sub">Before a referral goes to intake, check that it answers "why home health, why now?". Every referral is held to the same standard regardless of payer.</p>
+            <p class="rr-phi">{{ phi_notice }}</p>
+        </section>
+
+        <form method="post" action="{{ url_for('referral.check') }}#results" class="rr-card">
+            <fieldset>
+                <legend>1. Why home health?</legend>
+                <p class="rr-hint">The main condition home health will treat, in the doctor's words. Add the code if you have it.</p>
+                <label class="rr-label" for="diagnosis">Reason for referral</label>
+                <input class="rr-input" type="text" id="diagnosis" name="diagnosis" placeholder="e.g. CHF exacerbation after hospital stay" value="{{ form.get('diagnosis', '') }}">
+                <label class="rr-label" for="icd10_code">ICD-10 code (if known)</label>
+                <input class="rr-input" type="text" id="icd10_code" name="icd10_code" placeholder="e.g. I50.23" value="{{ form.get('icd10_code', '') }}" autocapitalize="characters">
+            </fieldset>
+
+            <fieldset>
+                <legend>2. Why now?</legend>
+                <div class="rr-row">
+                    <div>
+                        <label class="rr-label" for="event">What changed recently</label>
+                        <select class="rr-input" id="event" name="event">
+                            <option value="">Choose one</option>
+                            {% for value, label in options.events.items() %}
+                            <option value="{{ value }}" {% if form.get('event') == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="rr-label" for="event_date">When (discharge or event date)</label>
+                        <input class="rr-input" type="date" id="event_date" name="event_date" value="{{ form.get('event_date', '') }}">
+                    </div>
+                </div>
+                <label class="rr-label" for="soc_date">Planned start of care (blank means today)</label>
+                <input class="rr-input" type="date" id="soc_date" name="soc_date" value="{{ form.get('soc_date', '') }}">
+            </fieldset>
+
+            <fieldset>
+                <legend>3. Face-to-face encounter</legend>
+                <p class="rr-hint">The visit with a physician or practitioner, in person or by telehealth, about the reason for home health.</p>
+                <div class="rr-row">
+                    <div>
+                        <label class="rr-label" for="f2f_date">Visit date</label>
+                        <input class="rr-input" type="date" id="f2f_date" name="f2f_date" value="{{ form.get('f2f_date', '') }}">
+                    </div>
+                    <div>
+                        <label class="rr-label" for="f2f_practitioner">Seen by</label>
+                        <select class="rr-input" id="f2f_practitioner" name="f2f_practitioner">
+                            <option value="">Choose one</option>
+                            {% for value, label in options.practitioners.items() %}
+                            <option value="{{ value }}" {% if form.get('f2f_practitioner') == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <p class="rr-group">Does the visit note address the reason for home health?</p>
+                <div class="rr-radios">
+                    {% for value, label in [('yes', 'Yes'), ('no', 'No'), ('unsure', 'Not sure')] %}
+                    <label class="rr-choice"><input type="radio" name="f2f_related" value="{{ value }}" {% if form.get('f2f_related') == value %}checked{% endif %}> {{ label }}</label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>4. Homebound</legend>
+                <p class="rr-group">Criterion One: at least one</p>
+                {% for value, label in options.homebound_c1.items() %}
+                <label class="rr-choice"><input type="checkbox" name="homebound_c1" value="{{ value }}" {% if value in form.getlist('homebound_c1') %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+                <p class="rr-group">Criterion Two: both</p>
+                {% for value, label in options.homebound_c2.items() %}
+                <label class="rr-choice"><input type="checkbox" name="homebound_c2" value="{{ value }}" {% if value in form.getlist('homebound_c2') %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+                <label class="rr-label" for="homebound_notes">What the office said about leaving home (optional)</label>
+                <textarea class="rr-input" id="homebound_notes" name="homebound_notes" placeholder="e.g. walks 20 feet with walker then must rest, short of breath">{{ form.get('homebound_notes', '') }}</textarea>
+            </fieldset>
+
+            <fieldset>
+                <legend>5. Skilled need</legend>
+                <p class="rr-group">Services ordered</p>
+                {% for value, label in options.services.items() %}
+                <label class="rr-choice"><input type="checkbox" name="services" value="{{ value }}" {% if value in form.getlist('services') %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+                <label class="rr-label" for="skilled_reason">What the nurse or therapist will do</label>
+                <textarea class="rr-input" id="skilled_reason" name="skilled_reason" placeholder="e.g. teach new diuretic and daily weights; gait training after fall">{{ form.get('skilled_reason', '') }}</textarea>
+            </fieldset>
+
+            <button type="submit" class="btn-submit">Check referral</button>
+        </form>
+    </main>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('rr-copy');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                var text = document.getElementById('rr-message').innerText;
+                var done = function () {
+                    btn.textContent = 'Copied';
+                    setTimeout(function () { btn.textContent = 'Copy message'; }, 2000);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done, function () {});
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
