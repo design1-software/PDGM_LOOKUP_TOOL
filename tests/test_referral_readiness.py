@@ -119,9 +119,21 @@ def test_face_to_face_unrelated_is_red():
     assert by_key(run(f2f_related='no'))['f2f']['status'] == rr.RED
 
 
-def test_homebound_needs_criterion_one_and_both_parts_of_two():
-    assert by_key(run(homebound_c2=['taxing_effort']))['homebound']['status'] == rr.RED
-    assert by_key(run(homebound_c1=[]))['homebound']['status'] == rr.RED
+def test_homebound_is_informational_and_never_blocks():
+    for overrides in ({'homebound_c1': [], 'homebound_c2': []},
+                      {'homebound_c2': ['taxing_effort']},
+                      {'homebound_notes': 'elderly, lives alone'}):
+        result = run(**overrides)
+        homebound = by_key(result)['homebound']
+        assert homebound['status'] == rr.INFO
+        assert homebound['asks'] == []
+        assert result['overall'] == rr.GREEN
+        assert any('start-of-care visit' in f for f in homebound['findings'])
+
+
+def test_weak_homebound_reason_is_still_taught():
+    findings = by_key(run(homebound_notes='elderly, lives alone'))['homebound']['findings']
+    assert any('do not make a patient homebound' in f for f in findings)
 
 
 @pytest.mark.parametrize('services,status', [
@@ -139,6 +151,16 @@ def test_message_lists_every_ask():
     assert result['overall'] == rr.RED
     for ask in result['asks']:
         assert ask in result['message']
+
+
+def test_summary_has_every_check_and_the_message():
+    result = run(diagnosis='unsteady gait', icd10_code='')
+    summary = result['summary']
+    assert result['overall_label'] in summary
+    for check in result['checks']:
+        assert check['title'] in summary
+    assert '[AT SOC VISIT] Homebound status' in summary
+    assert result['message'] in summary
 
 
 def test_page_works_without_lead_capture(anon_client):

@@ -12,7 +12,9 @@ that hold all referrals to Medicare standards work. Sources:
   or 30 days after the start of care, related to the primary reason for home
   care, performed by a physician or allowed practitioner. Telehealth counts.
 * Homebound: Medicare Benefit Policy Manual, Ch. 7, 30.1.1 — Criterion One
-  (either part) AND Criterion Two (both parts).
+  (either part) AND Criterion Two (both parts). Homebound status is confirmed
+  by the clinician at the start-of-care visit, so it is informational here and
+  never makes a referral "not ready" or adds a request to the referral source.
 * Skilled need: 42 CFR 409.42(c) — intermittent skilled nursing, PT or SLP, or
   a continuing need for OT. OT alone cannot open a case; aide or MSW alone never
   qualifies.
@@ -38,6 +40,8 @@ from services.pdgm.eligibility import assess_primary_diagnosis
 from services.pdgm.impl import normalize_icd10
 
 GREEN, YELLOW, RED = "green", "yellow", "red"
+# Shown for education but excluded from the overall status and the message.
+INFO = "info"
 
 PHI_NOTICE = (
     "Do not enter patient names, dates of birth, MRNs or other identifiers. "
@@ -371,26 +375,20 @@ def check_homebound(c1, c2, notes):
     title = "Homebound status"
     c1 = [v for v in _as_list(c1) if v in HOMEBOUND_C1]
     c2 = [v for v in _as_list(c2) if v in HOMEBOUND_C2]
-    findings, asks = [], []
-
+    findings = []
     if c1:
-        findings.append("Criterion One met: %s." % "; ".join(HOMEBOUND_C1[v] for v in c1))
-    else:
-        findings.append("Criterion One not shown: the patient needs a device, another person's help or special transportation to leave home, or leaving is medically inadvisable.")
-        asks.append("What does the patient need in order to leave home (a cane, walker or wheelchair, another person's help, special transportation), or is leaving home medically inadvisable? Please document it.")
-
-    missing_c2 = [v for v in HOMEBOUND_C2 if v not in c2]
-    if not missing_c2:
-        findings.append("Criterion Two met: normally unable to leave home, and leaving takes considerable and taxing effort.")
-    else:
-        findings.append("Criterion Two needs both parts: %s." % " and ".join(HOMEBOUND_C2[v].lower() for v in HOMEBOUND_C2))
-        asks.append("Please describe what happens when the patient leaves home, for example how far they can walk before resting, shortness of breath, pain or needing to stop, so the note shows leaving home takes considerable and taxing effort.")
-
+        findings.append("Criterion One indicators noted: %s." % "; ".join(HOMEBOUND_C1[v] for v in c1))
+    if c2:
+        findings.append("Criterion Two indicators noted: %s." % "; ".join(HOMEBOUND_C2[v].lower() for v in c2))
     if notes and _WEAK_HOMEBOUND.search(notes.lower()):
         findings.append("Age, living alone or not driving do not make a patient homebound on their own.")
-
-    status = GREEN if c1 and not missing_c2 else RED
-    return _check("homebound", title, status, findings, asks)
+    findings += [
+        "Confirmed by the clinician at the start-of-care visit. If the patient is not homebound, they will not be admitted.",
+        "What the clinician looks for: Criterion One, needing a device, another person's help or special "
+        "transportation to leave home, or leaving being medically inadvisable; and Criterion Two, both a normal "
+        "inability to leave home and leaving taking considerable and taxing effort.",
+    ]
+    return _check("homebound", title, INFO, findings, [])
 
 
 def check_skilled_need(services, reason):
@@ -451,7 +449,7 @@ def evaluate(data, today=None):
         check_skilled_need(_multi(data, "services"), get("skilled_reason")),
     ]
 
-    statuses = [c["status"] for c in checks]
+    statuses = [c["status"] for c in checks if c["status"] != INFO]
     if RED in statuses:
         overall = RED
     elif YELLOW in statuses:
@@ -460,13 +458,16 @@ def evaluate(data, today=None):
         overall = GREEN
 
     asks = [ask for c in checks for ask in c["asks"]]
+    message = compose_message(asks)
     return {
         "overall": overall,
+        "overall_label": OVERALL_LABELS[overall],
         "soc_date": soc.isoformat(),
         "diagnosis_data": diagnosis_data,
         "checks": checks,
         "asks": asks,
-        "message": compose_message(asks),
+        "message": message,
+        "summary": compose_summary(overall, checks, message, soc),
     }
 
 
@@ -475,6 +476,29 @@ def _multi(data, key):
     if callable(getlist):
         return getlist(key)
     return data.get(key)
+
+
+OVERALL_LABELS = {
+    GREEN: "Ready to send to intake",
+    YELLOW: "Almost ready: confirm the items below",
+    RED: "Not ready: get the items below from the referral source",
+}
+STATUS_LABELS = {GREEN: "OK", YELLOW: "CHECK", RED: "MISSING", INFO: "AT SOC VISIT"}
+
+
+def compose_summary(overall, checks, message, soc):
+    """The whole result as plain text, for sharing with a rep."""
+    lines = ["REFERRAL READINESS CHECK (pdgmlookup.com)",
+             "Planned start of care: %s" % soc.isoformat(),
+             "Result: %s" % OVERALL_LABELS[overall], ""]
+    for c in checks:
+        lines.append("[%s] %s" % (STATUS_LABELS[c["status"]], c["title"]))
+        lines += ["  - %s" % f for f in c["findings"]]
+        lines.append("")
+    if message:
+        lines += ["MESSAGE FOR THE REFERRAL SOURCE", message, ""]
+    lines.append("Intake makes the final decision on every referral.")
+    return "\n".join(lines)
 
 
 def compose_message(asks):
