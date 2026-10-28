@@ -104,7 +104,7 @@ holding every referral to Medicare standards regardless of payer
 
 | Check | Rule |
 |---|---|
-| Primary diagnosis | The same `assess_primary_diagnosis` used by lookup and HIPPS, against the mapping for the planned start-of-care date. Common symptom wording (weakness, gait, falls, SOB, pain, "status post", "history of stroke") is flagged with the question to ask about the underlying cause. Text without a code is never green |
+| Primary diagnosis | The same `assess_primary_diagnosis` used by lookup and HIPPS, against the mapping for the planned start-of-care date. Plain referral wording ("CHF exacerbation", "s/p left TKA", "CVA with left side weakness") is matched instantly and without AI to primary-eligible codes (`services/pdgm/phrase_match.py`), offered as choices to tap; nothing is auto-selected. Common symptom wording (weakness, gait, falls, SOB, pain, "history of stroke") is flagged with the question to ask about the underlying cause. Text without a confirmed code is never green |
 | Why now | A precipitating event; an inpatient or post-acute discharge within 14 days of start of care makes the period institutional |
 | Face-to-face | 90 days before to 30 days after start of care, by a physician/NP/PA/CNS/CNM, related to the primary reason (42 CFR 424.22) |
 | Homebound | Informational: confirmed by the clinician at the start-of-care visit, so it never makes a referral "not ready". Shows what the clinician looks for, Criterion One and both parts of Criterion Two (Benefit Policy Manual Ch. 7, 30.1.1) |

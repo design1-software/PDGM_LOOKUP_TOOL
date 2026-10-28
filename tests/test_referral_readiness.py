@@ -78,10 +78,31 @@ def test_external_cause_code_asks_for_the_injury():
 def test_symptom_text_is_red_and_named_cause_is_yellow():
     assert by_key(run(diagnosis='generalized weakness', icd10_code=''))['diagnosis']['status'] == rr.RED
     assert by_key(run(diagnosis='weakness due to CHF exacerbation', icd10_code=''))['diagnosis']['status'] == rr.YELLOW
+    assert by_key(run(diagnosis='weakness due to old age', icd10_code=''))['diagnosis']['status'] == rr.YELLOW
 
 
 def test_text_without_code_is_never_green():
     assert by_key(run(diagnosis='needs help at home', icd10_code=''))['diagnosis']['status'] == rr.YELLOW
+
+
+def test_plain_text_offers_code_choices_instead_of_asking_for_a_code():
+    dx = by_key(run(diagnosis='CHF exacerbation', icd10_code=''))['diagnosis']
+    assert dx['status'] == rr.YELLOW
+    assert dx['asks'] == []
+    assert dx['choices'][0]['code'] == 'I50.23'
+    assert dx['choices'][0]['group'] == 'MMTA - Cardiac'
+
+
+def test_named_cause_after_a_symptom_offers_choices_for_the_cause():
+    dx = by_key(run(diagnosis='weakness due to CHF exacerbation', icd10_code=''))['diagnosis']
+    assert dx['choices'][0]['code'] == 'I50.23'
+
+
+def test_tapped_choice_is_checked_like_a_typed_code():
+    result = rr.evaluate(ready_referral(diagnosis='CHF exacerbation', icd10_code='', icd10_choice='I50.23'),
+                         today=TODAY)
+    assert by_key(result)['diagnosis']['status'] == rr.GREEN
+    assert result['overall'] == rr.GREEN
 
 
 def test_unknown_code_is_yellow():
@@ -161,6 +182,14 @@ def test_summary_has_every_check_and_the_message():
         assert check['title'] in summary
     assert '[AT SOC VISIT] Homebound status' in summary
     assert result['message'] in summary
+
+
+def test_choice_buttons_render_and_submit_the_code(anon_client):
+    response = anon_client.post('/referral-check', data={'diagnosis': 'CHF exacerbation'})
+    assert b'name="icd10_choice" value="I50.23"' in response.data
+    response = anon_client.post('/referral-check', data={'diagnosis': 'CHF exacerbation',
+                                                         'icd10_choice': 'I50.23'})
+    assert b'value="I50.23" autocapitalize' in response.data
 
 
 def test_page_works_without_lead_capture(anon_client):

@@ -50,7 +50,21 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
         }
-        .rr-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+        /* cross_browser_compatibility.css paints every input white with a more
+           specific selector, while clinical_theme.css forces light text: the
+           result was light grey on white. Pin the field colours to the theme. */
+        .rr-wrap .rr-input {
+            background: var(--bg-input) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 4px !important;
+            font-size: 1rem !important;
+            padding: 0.75rem !important;
+            color-scheme: dark;
+        }
+        .rr-wrap select.rr-input { -webkit-appearance: auto !important; appearance: auto !important; }
+        .rr-wrap .rr-input::placeholder { color: var(--text-muted) !important; opacity: 1; }
+        .rr-wrap .rr-input:focus { outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 2px var(--accent-glow) !important; }
         textarea.rr-input { min-height: 72px; resize: vertical; }
         .rr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         .rr-choice { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.4rem 0; font-size: 0.95rem; color: var(--text-primary); }
@@ -94,6 +108,29 @@
             cursor: pointer;
         }
         .rr-muted { color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem; }
+        .rr-choices { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+        .rr-choice-btn {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.15rem 0.75rem;
+            text-align: left;
+            padding: 0.7rem 0.85rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font: inherit;
+            cursor: pointer;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            white-space: normal !important;
+        }
+        .rr-choice-desc, .rr-choice-group { min-width: 0; overflow-wrap: anywhere; }
+        .rr-choice-btn:hover, .rr-choice-btn:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-glow); }
+        .rr-choice-code { font-family: var(--font-mono); font-weight: 600; color: var(--accent); grid-row: span 2; align-self: center; }
+        .rr-choice-desc { font-size: 0.92rem; }
+        .rr-choice-group { font-size: 0.78rem; color: var(--text-secondary); }
         .rr-brand { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
         .rr-share { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
         .rr-share-note { flex-basis: 100%; color: var(--text-muted); font-size: 0.8rem; }
@@ -125,6 +162,17 @@
             <div class="rr-check rr-{{ c.status }}">
                 <h3>{{ c.title }} <span class="rr-badge">{{ {'green': 'OK', 'yellow': 'Check', 'red': 'Missing', 'info': 'At SOC visit'}[c.status] }}</span></h3>
                 <ul>{% for f in c.findings %}<li>{{ f }}</li>{% endfor %}</ul>
+                {% if c.choices %}
+                <div class="rr-choices">
+                    {% for choice in c.choices %}
+                    <button type="submit" form="rr-form" name="icd10_choice" value="{{ choice.code }}" class="rr-choice-btn">
+                        <span class="rr-choice-code">{{ choice.code }}</span>
+                        <span class="rr-choice-desc">{{ choice.description }}</span>
+                        <span class="rr-choice-group">{{ choice.group }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
 
@@ -156,14 +204,14 @@
             <p class="rr-phi">{{ phi_notice }}</p>
         </section>
 
-        <form method="post" action="{{ url_for('referral.check') }}#results" class="rr-card">
+        <form method="post" action="{{ url_for('referral.check') }}#results" class="rr-card" id="rr-form">
             <fieldset>
                 <legend>1. Why home health?</legend>
-                <p class="rr-hint">The main condition home health will treat, in the doctor's words. Add the code if you have it.</p>
+                <p class="rr-hint">The main condition home health will treat, in the referral's words. You don't need the code: matching codes are offered to tap.</p>
                 <label class="rr-label" for="diagnosis">Reason for referral</label>
                 <input class="rr-input" type="text" id="diagnosis" name="diagnosis" placeholder="e.g. CHF exacerbation after hospital stay" value="{{ form.get('diagnosis', '') }}">
                 <label class="rr-label" for="icd10_code">ICD-10 code (if known)</label>
-                <input class="rr-input" type="text" id="icd10_code" name="icd10_code" placeholder="e.g. I50.23" value="{{ form.get('icd10_code', '') }}" autocapitalize="characters">
+                <input class="rr-input" type="text" id="icd10_code" name="icd10_code" placeholder="e.g. I50.23" value="{{ form.get('icd10_choice') or form.get('icd10_code', '') }}" autocapitalize="characters">
             </fieldset>
 
             <fieldset>
