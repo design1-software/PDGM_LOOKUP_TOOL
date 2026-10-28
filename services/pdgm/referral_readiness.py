@@ -216,6 +216,17 @@ _FLAG_ASKS = {
     "UNACCEPTABLE_PDX": "This diagnosis cannot be the main reason for home health. What condition is home health being ordered to treat? Please name it in the referral.",
     "NO_CLINICAL_GROUP": "This diagnosis cannot be the main reason for home health. What condition is home health being ordered to treat? Please name it in the referral.",
 }
+# Offices document diagnoses; they rarely supply codes. Ask for the detail
+# that determines the code instead of asking for the code itself.
+_SPECIFIC_DIAGNOSIS_ASK = (
+    "What is the main diagnosis home health will treat? Please state it as specifically as it is "
+    "documented, for example the type, site, side, and stage or severity."
+)
+_WOUND_ASK = (
+    "Is the wound a diabetic (non-pressure) ulcer, a pressure ulcer, or a surgical wound? "
+    "Please document its location, side, and stage or depth."
+)
+_WOUND_WORDS = re.compile(r"\b(sore|ulcer|wound|lesion|bedsore|decubitus)s?\b")
 _UNSPECIFIED_ASK = (
     "Can the note be more specific about the main diagnosis, for example the type, "
     "site, side, whether it is acute or chronic, and any complications, where known?"
@@ -280,21 +291,34 @@ def check_diagnosis(text, icd10_code, icd10_data, data_error=None):
     choices = _code_choices(text, icd10_data)
     if choices:
         # Never auto-selected: the rep confirms which one the documentation supports.
-        check = _check("diagnosis", title, YELLOW,
-                       ["Possible primary diagnosis codes for \"%s\". Each one groups under PDGM. "
-                        "Tap the one that matches the doctor's documentation." % text],
-                       [])
+        findings = ["Possible primary diagnosis codes for \"%s\". Each one groups under PDGM. "
+                    "Tap the one that matches the doctor's documentation." % text]
+        asks = []
+        codes = [c["code"] for c in choices]
+        if any(re.match(r"E(08|09|10|11|13)\.62[12]", c) for c in codes):
+            findings.append("A diabetic foot or skin ulcer also needs an L97/L98 code for the ulcer's site, side "
+                            "and depth, and the wound must be documented as a diabetic (non-pressure) ulcer. "
+                            "A pressure ulcer is coded differently and is not assumed to be diabetic.")
+            asks.append(_WOUND_ASK)
+        elif any(c.startswith("L89") for c in codes) and "stage" not in lowered:
+            findings.append("Pressure ulcer codes depend on the site, side and stage. Confirm all three from "
+                            "the wound documentation before choosing.")
+            asks.append("Please document the pressure ulcer's location, side and stage.")
+        check = _check("diagnosis", title, YELLOW, findings, asks)
         check["choices"] = choices
         return check
 
     matched = [f for f in RED_FLAG_DIAGNOSES if re.search(f["pattern"], lowered)]
     if not matched:
         # Words alone can't prove the diagnosis groups, so never green without a code.
+        asks = [_SPECIFIC_DIAGNOSIS_ASK]
+        if _WOUND_WORDS.search(lowered):
+            asks.append(_WOUND_ASK)
         return _check("diagnosis", title, YELLOW,
                       ["No matching primary diagnosis code was found for \"%s\". The condition may not "
                        "group under PDGM as a primary, or may be worded differently. Try other wording, "
                        "or check it in the PDGM Lookup." % text],
-                      ["What is the ICD-10 code for the main diagnosis home health will treat?"])
+                      asks)
 
     findings = [f["why"] for f in matched]
     asks = [f["ask"] for f in matched]

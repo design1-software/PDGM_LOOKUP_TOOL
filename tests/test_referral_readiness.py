@@ -93,6 +93,30 @@ def test_plain_text_offers_code_choices_instead_of_asking_for_a_code():
     assert dx['choices'][0]['group'] == 'MMTA - Cardiac'
 
 
+def test_diabetic_foot_sore_offers_e11621_and_asks_about_the_wound():
+    dx = by_key(run(diagnosis='diabetes and a foot sore', icd10_code=''))['diagnosis']
+    assert dx['choices'][0]['code'] == 'E11.621'
+    assert dx['choices'][0]['group'] == 'Wound'
+    assert any('L97' in f for f in dx['findings'])
+    assert any('diabetic (non-pressure) ulcer' in a for a in dx['asks'])
+
+
+def test_unstaged_pressure_ulcer_asks_for_site_and_stage():
+    dx = by_key(run(diagnosis='bed sore', icd10_code=''))['diagnosis']
+    assert all(c['code'].startswith('L89') for c in dx['choices'])
+    assert any('stage' in a for a in dx['asks'])
+    staged = by_key(run(diagnosis='pressure ulcer sacrum stage 3', icd10_code=''))['diagnosis']
+    assert staged['asks'] == []
+
+
+def test_unmatched_wording_asks_for_specifics_not_a_code():
+    dx = by_key(run(diagnosis='needs help at home', icd10_code=''))['diagnosis']
+    assert not any('ICD-10 code' in a for a in dx['asks'])
+    assert any('as specifically as it is documented' in a for a in dx['asks'])
+    wound = by_key(run(diagnosis='nonhealing wound', icd10_code=''))['diagnosis']
+    assert any('pressure ulcer, or a surgical wound' in a for a in wound['asks'])
+
+
 def test_named_cause_after_a_symptom_offers_choices_for_the_cause():
     dx = by_key(run(diagnosis='weakness due to CHF exacerbation', icd10_code=''))['diagnosis']
     assert dx['choices'][0]['code'] == 'I50.23'
