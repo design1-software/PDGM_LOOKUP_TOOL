@@ -38,6 +38,7 @@ from services.cms_data import CLINICAL_GROUPS
 from services.pdgm import datasets
 from services.pdgm.eligibility import assess_primary_diagnosis
 from services.pdgm.impl import normalize_icd10
+from services.pdgm.phrase_match import match_primary
 
 GREEN, YELLOW, RED = "green", "yellow", "red"
 # Shown for education but excluded from the overall status and the message.
@@ -276,12 +277,23 @@ def check_diagnosis(text, icd10_code, icd10_data, data_error=None):
                       ["What condition is home health being ordered to treat?"])
 
     lowered = text.lower()
+    choices = _code_choices(text, icd10_data)
+    if choices:
+        # Never auto-selected: the rep confirms which one the documentation supports.
+        check = _check("diagnosis", title, YELLOW,
+                       ["Possible primary diagnosis codes for \"%s\". Each one groups under PDGM. "
+                        "Tap the one that matches the doctor's documentation." % text],
+                       [])
+        check["choices"] = choices
+        return check
+
     matched = [f for f in RED_FLAG_DIAGNOSES if re.search(f["pattern"], lowered)]
     if not matched:
         # Words alone can't prove the diagnosis groups, so never green without a code.
         return _check("diagnosis", title, YELLOW,
-                      ["No symptom-only wording was found, but the diagnosis can't be confirmed from words alone. "
-                       "Add the ICD-10 code, or check it in the PDGM Lookup."],
+                      ["No matching primary diagnosis code was found for \"%s\". The condition may not "
+                       "group under PDGM as a primary, or may be worded differently. Try other wording, "
+                       "or check it in the PDGM Lookup." % text],
                       ["What is the ICD-10 code for the main diagnosis home health will treat?"])
 
     findings = [f["why"] for f in matched]
@@ -290,6 +302,23 @@ def check_diagnosis(text, icd10_code, icd10_data, data_error=None):
         findings.append("A cause appears to be named. Make sure the physician's note lists that cause as the diagnosis being treated, not the symptom.")
         return _check("diagnosis", title, YELLOW, findings, asks)
     return _check("diagnosis", title, RED, findings, asks)
+
+
+def _code_choices(text, icd10_data, limit=5):
+    """Grouping candidates for referral wording, or for the cause it names."""
+    if icd10_data is None:
+        return []
+    found = match_primary(text, icd10_data, limit=limit)
+    if not found:
+        # "weakness due to CHF exacerbation": match the named cause.
+        parts = _CAUSE_CONNECTOR.split(text.lower(), maxsplit=1)
+        if len(parts) == 3:
+            found = match_primary(parts[2], icd10_data, limit=limit)
+    return [{
+        "code": c["code"],
+        "description": c["description"],
+        "group": CLINICAL_GROUPS.get(c["row"].get("pdgm_clinical_group_code"), ""),
+    } for c in found]
 
 
 def check_event(event, event_date, soc):
@@ -442,7 +471,8 @@ def evaluate(data, today=None):
         data_error = "diagnosis data verification failed"
 
     checks = [
-        check_diagnosis(get("diagnosis"), get("icd10_code"), icd10_data, data_error),
+        # A tapped code choice takes precedence over the typed code field.
+        check_diagnosis(get("diagnosis"), get("icd10_choice") or get("icd10_code"), icd10_data, data_error),
         check_event(get("event"), get("event_date"), soc),
         check_face_to_face(get("f2f_date"), get("f2f_practitioner"), get("f2f_related"), soc),
         check_homebound(_multi(data, "homebound_c1"), _multi(data, "homebound_c2"), get("homebound_notes")),
@@ -494,6 +524,7 @@ def compose_summary(overall, checks, message, soc):
     for c in checks:
         lines.append("[%s] %s" % (STATUS_LABELS[c["status"]], c["title"]))
         lines += ["  - %s" % f for f in c["findings"]]
+        lines += ["    > %s %s (%s)" % (ch["code"], ch["description"], ch["group"]) for ch in c.get("choices", [])]
         lines.append("")
     if message:
         lines += ["MESSAGE FOR THE REFERRAL SOURCE", message, ""]
