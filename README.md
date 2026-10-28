@@ -96,7 +96,26 @@ query; that remains a staff review task.
 - Export to calendar via `.ics` download (Outlook, Google Calendar, Apple Calendar)
 - Send email reminders via SMTP
 
-### 4. Documentation Roadmap & OASIS Assessment
+### 4. Referral Readiness Check
+`/referral-check` is a phone-friendly checklist for account reps. Before a referral
+goes to intake it checks whether the referral answers "why home health, why now?",
+holding every referral to Medicare standards regardless of payer
+(`services/pdgm/referral_readiness.py`):
+
+| Check | Rule |
+|---|---|
+| Primary diagnosis | The same `assess_primary_diagnosis` used by lookup and HIPPS, against the mapping for the planned start-of-care date. Common symptom wording (weakness, gait, falls, SOB, pain, "status post", "history of stroke") is flagged with the question to ask about the underlying cause. Text without a code is never green |
+| Why now | A precipitating event; an inpatient or post-acute discharge within 14 days of start of care makes the period institutional |
+| Face-to-face | 90 days before to 30 days after start of care, by a physician/NP/PA/CNS/CNM, related to the primary reason (42 CFR 424.22) |
+| Homebound | Criterion One (either part) and Criterion Two (both parts) (Benefit Policy Manual Ch. 7, 30.1.1) |
+| Skilled need | Skilled nursing, PT or SLP; OT alone can't open a case; aide or MSW alone never qualifies (42 CFR 409.42) |
+
+Each check is green, yellow or red, and the page drafts a message the rep can copy
+to the referral source listing exactly what's missing. It uses no AI, stores
+nothing, and is not behind the lead-capture gate. Reps should not enter patient
+identifiers. Intake still makes the final decision.
+
+### 5. Documentation Roadmap & OASIS Assessment
 - AI-generated discipline-specific documentation guidance (RN, PT, OT, SLP, HHA)
 - Sample OASIS-E assessment generation with official CMS item numbers and terminology
 - Uses structured prompt templates from `/prompts/` with PDGM-group-specific references
@@ -181,6 +200,7 @@ Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (s
 | `/api/comorbidity-check` | POST | `{"primary_icd10": "...", "secondary_icd10s": [...]}` | Comorbidity adjustment without a full HIPPS calculation, with the `low_subgroups` and CMS `interactions` that produced it. Per the CY 2026 CMS file: Low = one secondary in a low subgroup; High = two secondaries forming one of the 98 interaction pairs; the primary never counts |
 | `/api/roadmap` | POST | `{"diagnosis": "...", "pdgm_group": "...", "disciplines": ["SN"]}` | Generate documentation roadmap |
 | `/api/assessment` | POST | `{"diagnosis": "...", "pdgm_group": "..."}` | Generate sample OASIS assessment |
+| `/api/referral-check` | POST | `{"icd10_code": "...", "diagnosis": "...", "event": "...", "soc_date": "...", "f2f_date": "...", ...}` | Referral readiness checks as JSON (not lead-gated) |
 
 ### CMS Reference Data
 
@@ -201,6 +221,7 @@ Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (s
 | `/recert` | GET/POST | Recertification date calculator |
 | `/recert/ics` | GET | Download `.ics` calendar event |
 | `/recert/email` | POST | Send recert reminder email |
+| `/referral-check` | GET/POST | Referral Readiness Check for account reps |
 
 ### Authentication
 

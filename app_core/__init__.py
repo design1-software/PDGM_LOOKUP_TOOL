@@ -48,10 +48,12 @@ def create_app(config=None):
     from blueprints.api import bp as api_bp
     from blueprints.main import bp as main_bp
     from blueprints.recert import bp as recert_bp
+    from blueprints.referral import bp as referral_bp
 
     app.register_blueprint(api_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(recert_bp)
+    app.register_blueprint(referral_bp)
 
     # Register auth blueprint
     from app_core.routes.auth import auth_bp
