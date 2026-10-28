@@ -178,7 +178,7 @@ Tests use in-memory SQLite, a fixed diagnosis-date clock, and mocked AI calls (s
 | `/api/lookup` | POST | `{"query": "I10", "area_code": "26300"}` | Lookup by ICD-10 code or clinical phrase. With `area_code`, also returns `payment_range`. |
 | `/api/hipps` | POST | `{"primary_icd10": "...", "secondary_icd10s": [], "admission_source": 1, "episode_timing": 1, "gg0130": {}, "gg0170": {}, "area_code": "..."}` | Derive the real HIPPS code and its exact CY 2026 payment |
 | `/api/compare` | POST | `{"code_a": "...", "code_b": "...", "area_code": "..."}` | Side-by-side diagnosis comparison |
-| `/api/comorbidity-check` | POST | `{"primary_icd10": "...", "secondary_icd10s": [...]}` | Comorbidity adjustment without a full HIPPS calculation |
+| `/api/comorbidity-check` | POST | `{"primary_icd10": "...", "secondary_icd10s": [...]}` | Comorbidity adjustment without a full HIPPS calculation, with the `low_subgroups` and CMS `interactions` that produced it. Per the CY 2026 CMS file: Low = one secondary in a low subgroup; High = two secondaries forming one of the 98 interaction pairs; the primary never counts |
 | `/api/roadmap` | POST | `{"diagnosis": "...", "pdgm_group": "...", "disciplines": ["SN"]}` | Generate documentation roadmap |
 | `/api/assessment` | POST | `{"diagnosis": "...", "pdgm_group": "..."}` | Generate sample OASIS assessment |
 

@@ -169,7 +169,7 @@ def api_hipps():
         v = validate_hipps_request(body)
 
         from app import normalize_icd10
-        from services.pdgm.comorbidity import determine_comorbidity_adjustment
+        from services.pdgm.comorbidity import explain_comorbidity_adjustment
         from services.pdgm.functional import calculate_functional_level
         from services.pdgm.hipps import generate_hipps_code, decode_hipps, calculate_payment
 
@@ -208,7 +208,8 @@ def api_hipps():
                     'comorbidity_group': row.get('COMORBIDITY_GROUP', 'No_group'),
                 })
 
-        comorbidity_adj = determine_comorbidity_adjustment(primary_subgroup, secondary_subgroups)
+        comorbidity_detail = explain_comorbidity_adjustment(secondary_subgroups)
+        comorbidity_adj = comorbidity_detail['adjustment']
 
         # Functional level
         functional = calculate_functional_level(
@@ -267,6 +268,7 @@ def api_hipps():
             'dimensions': breakdown,
             'functional': functional,
             'comorbidity_adjustment': comorbidity_adj,
+            'comorbidity_detail': comorbidity_detail,
             'payment': payment,
             'payment_note': payment_note,
         })
@@ -324,7 +326,7 @@ def api_comorbidity_check():
         primary_code = body.get('primary_icd10', '')
         secondary_codes = body.get('secondary_icd10s', [])
         from app import normalize_icd10
-        from services.pdgm.comorbidity import determine_comorbidity_adjustment
+        from services.pdgm.comorbidity import explain_comorbidity_adjustment
         from services.pdgm.repository import get_icd10_map
         service_date = body.get('service_date')
         metadata = diagnosis_metadata(service_date)
@@ -340,8 +342,10 @@ def api_comorbidity_check():
             if not row:
                 return jsonify(error=f'Secondary diagnosis not found for this claim From date: {c}'), 400
             secondary_sgs.append(row.get('COMORBIDITY_GROUP', 'No_group'))
-        adj = determine_comorbidity_adjustment(primary_sg, secondary_sgs)
-        return jsonify(adjustment=adj, primary_subgroup=primary_sg, secondary_subgroups=secondary_sgs, diagnosis_data=metadata)
+        detail = explain_comorbidity_adjustment(secondary_sgs)
+        return jsonify(adjustment=detail['adjustment'], low_subgroups=detail['low_subgroups'],
+                       interactions=detail['interactions'], primary_subgroup=primary_sg,
+                       secondary_subgroups=secondary_sgs, diagnosis_data=metadata)
     except DiagnosisDateError as e:
         return jsonify(error=str(e)), 400
     except DiagnosisDataError:
