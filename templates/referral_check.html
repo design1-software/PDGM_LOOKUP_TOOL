@@ -61,6 +61,7 @@
         .rr-green .rr-dot, .rr-check.rr-green { --status: #22C55E; }
         .rr-yellow .rr-dot, .rr-check.rr-yellow { --status: var(--amber); }
         .rr-red .rr-dot, .rr-check.rr-red { --status: #F87171; }
+        .rr-check.rr-info { --status: var(--accent); }
         .rr-dot { background: var(--status); }
         .rr-check {
             border-left: 4px solid var(--status);
@@ -93,6 +94,9 @@
             cursor: pointer;
         }
         .rr-muted { color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem; }
+        .rr-brand { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; }
+        .rr-share { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .rr-share-note { flex-basis: 100%; color: var(--text-muted); font-size: 0.8rem; }
         .rr-wrap .btn-submit { width: 100%; }
         @media (max-width: 560px) {
             .rr-row { grid-template-columns: 1fr; }
@@ -111,15 +115,15 @@
     <main class="rr-wrap">
         {% if result %}
         <section class="rr-card" id="results" aria-live="polite">
+            <div id="rr-capture">
+            <p class="rr-brand">Referral Readiness Check · pdgmlookup.com</p>
             <div class="rr-overall rr-{{ result.overall }}">
                 <span class="rr-dot"></span>
-                {% if result.overall == 'green' %}Ready to send to intake
-                {% elif result.overall == 'yellow' %}Almost ready: confirm the items below
-                {% else %}Not ready: get the items below from the referral source{% endif %}
+                {{ result.overall_label }}
             </div>
             {% for c in result.checks %}
             <div class="rr-check rr-{{ c.status }}">
-                <h3>{{ c.title }} <span class="rr-badge">{{ {'green': 'OK', 'yellow': 'Check', 'red': 'Missing'}[c.status] }}</span></h3>
+                <h3>{{ c.title }} <span class="rr-badge">{{ {'green': 'OK', 'yellow': 'Check', 'red': 'Missing', 'info': 'At SOC visit'}[c.status] }}</span></h3>
                 <ul>{% for f in c.findings %}<li>{{ f }}</li>{% endfor %}</ul>
             </div>
             {% endfor %}
@@ -127,13 +131,22 @@
             {% if result.message %}
             <h3 style="margin-top:1.5rem">Message for the referral source</h3>
             <div class="rr-message" id="rr-message">{{ result.message }}</div>
-            <button type="button" class="rr-copy" id="rr-copy">Copy message</button>
             {% endif %}
             <p class="rr-muted">
                 Planned start of care used for date checks: {{ result.soc_date }}.
                 {% if result.diagnosis_data %}Diagnosis mapping: PDGM grouper {{ result.diagnosis_data.grouper_version }}.{% endif %}
                 Intake makes the final decision on every referral.
             </p>
+            </div>
+
+            <div class="rr-share">
+                {% if result.message %}<button type="button" class="rr-copy" data-copy="rr-message-text">Copy message</button>{% endif %}
+                <button type="button" class="rr-copy" data-copy="rr-summary-text">Copy full summary</button>
+                <button type="button" class="rr-copy" id="rr-image">Save as image</button>
+                <p class="rr-share-note">Share the image or summary with a rep to walk through why each item matters.</p>
+            </div>
+            <textarea id="rr-message-text" hidden>{{ result.message }}</textarea>
+            <textarea id="rr-summary-text" hidden>{{ result.summary }}</textarea>
         </section>
         {% endif %}
 
@@ -201,7 +214,8 @@
             </fieldset>
 
             <fieldset>
-                <legend>4. Homebound</legend>
+                <legend>4. Homebound (optional)</legend>
+                <p class="rr-hint">The start-of-care clinician confirms homebound status in the home. Note anything the office already said.</p>
                 <p class="rr-group">Criterion One: at least one</p>
                 {% for value, label in options.homebound_c1.items() %}
                 <label class="rr-choice"><input type="checkbox" name="homebound_c1" value="{{ value }}" {% if value in form.getlist('homebound_c1') %}checked{% endif %}> {{ label }}</label>
@@ -230,17 +244,67 @@
 
     <script>
         (function () {
-            var btn = document.getElementById('rr-copy');
-            if (!btn) return;
-            btn.addEventListener('click', function () {
-                var text = document.getElementById('rr-message').innerText;
-                var done = function () {
-                    btn.textContent = 'Copied';
-                    setTimeout(function () { btn.textContent = 'Copy message'; }, 2000);
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(done, function () {});
-                }
+            function flash(btn, text) {
+                var original = btn.dataset.label || btn.textContent;
+                btn.dataset.label = original;
+                btn.textContent = text;
+                setTimeout(function () { btn.textContent = original; }, 2000);
+            }
+
+            document.querySelectorAll('[data-copy]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var text = document.getElementById(btn.dataset.copy).value;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function () { flash(btn, 'Copied'); },
+                            function () { flash(btn, 'Copy failed'); });
+                    }
+                });
+            });
+
+            var imageBtn = document.getElementById('rr-image');
+            if (!imageBtn) return;
+
+            function loadHtml2canvas() {
+                if (window.html2canvas) return Promise.resolve(window.html2canvas);
+                return new Promise(function (resolve, reject) {
+                    var script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    script.onload = function () { resolve(window.html2canvas); };
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+
+            imageBtn.addEventListener('click', function () {
+                var target = document.getElementById('rr-capture');
+                var background = getComputedStyle(document.getElementById('results')).backgroundColor;
+                imageBtn.disabled = true;
+                imageBtn.textContent = 'Preparing…';
+                loadHtml2canvas().then(function (html2canvas) {
+                    return html2canvas(target, { backgroundColor: background, scale: 2, useCORS: true });
+                }).then(function (canvas) {
+                    canvas.toBlob(function (blob) {
+                        var name = 'referral-readiness-{{ result.soc_date }}.png';
+                        var file = new File([blob], name, { type: 'image/png' });
+                        imageBtn.disabled = false;
+                        imageBtn.textContent = 'Save as image';
+                        // Phones: open the share sheet (Messages, email). Desktop: download.
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            navigator.share({ files: [file], title: 'Referral Readiness Check' }).catch(function () {});
+                            return;
+                        }
+                        var link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = name;
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+                    }, 'image/png');
+                }).catch(function () {
+                    imageBtn.disabled = false;
+                    flash(imageBtn, 'Could not create image');
+                });
             });
         })();
     </script>
